@@ -1,0 +1,32 @@
+.page { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.body { flex: 1; display: flex; overflow: hidden; }
+.feedCol { flex: 1; overflow-y: auto; padding: 24px 20px; min-width: 0; }
+
+.onlineBar { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px; margin-bottom: 20px; }
+.onlineLabel { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.3px; color: var(--text3); font-family: var(--font-display); display: block; margin-bottom: 12px; }
+.onlineList { display: flex; gap: 16px; flex-wrap: wrap; }
+.onlineBubble { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; }
+.onlineAvatar { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; font-family: var(--font-display); position: relative; }
+.onlineDot { width: 12px; height: 12px; background: var(--green); border-radius: 50%; border: 2px solid var(--surface); margin-top: -14px; margin-left: 32px; align-self: flex-start; }
+.onlineName { font-size: 11px; color: var(--text3); }
+
+.feedLabel { font-size: 13px; color: var(--text3); margin-bottom: 16px; }
+.posts { display: flex; flex-direction: column; gap: 14px; }
+
+.rightPanel { width: 260px; flex-shrink: 0; border-left: 1px solid var(--border); padding: 24px 16px; background: var(--bg2); overflow-y: auto; }
+.panelTitle { font-family: var(--font-display); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.3px; color: var(--text3); margin-bottom: 14px; }
+.followItem { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.followItem:last-child { border-bottom: none; }
+.followAvatarWrap { position: relative; flex-shrink: 0; }
+.followAvatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; font-family: var(--font-display); }
+.onlineDotSmall { position: absolute; bottom: 0; right: 0; width: 8px; height: 8px; background: var(--green); border-radius: 50%; border: 1.5px solid var(--bg2); }
+.followName { flex: 1; font-size: 13px; color: var(--text); font-weight: 500; }
+.unfollowBtn { padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--text3); font-size: 11px; cursor: pointer; transition: all var(--transition); white-space: nowrap; font-family: var(--font-body); }
+.unfollowBtn:hover { border-color: var(--red); color: var(--red); }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .body { flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+  .feedCol { overflow-y: visible; padding: 16px 12px; }
+  .rightPanel { width: 100%; border-left: none; border-top: 1px solid var(--border); overflow-y: visible; padding: 20px 12px; }
+}

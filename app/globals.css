@@ -1,0 +1,79 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
+
+:root {
+  --bg:           #0a090f;
+  --bg2:          #111018;
+  --bg3:          #18161f;
+  --bg4:          #1f1d28;
+  --surface:      #1c1a24;
+  --surface2:     #23202e;
+  --border:       rgba(255,255,255,0.07);
+  --border2:      rgba(255,255,255,0.12);
+  --text:         #f0eeff;
+  --text2:        #9d9ab5;
+  --text3:        #5e5b72;
+  --accent:       #7c5cfc;
+  --accent2:      #9b7fff;
+  --accent-glow:  rgba(124,92,252,0.18);
+  --red:          #fc5c7d;
+  --red-bg:       rgba(252,92,125,0.12);
+  --green:        #5cfcb4;
+  --green-bg:     rgba(92,252,180,0.10);
+  --amber:        #fcb45c;
+  --amber-bg:     rgba(252,180,92,0.10);
+  --pink:         #e879f9;
+  --font-display: 'Syne', sans-serif;
+  --font-body:    'DM Sans', sans-serif;
+  --radius:       12px;
+  --radius-sm:    8px;
+  --radius-lg:    18px;
+  --sidebar-w:    260px;
+  --right-w:      300px;
+  --transition:   0.18s cubic-bezier(0.4,0,0.2,1);
+}
+
+[data-theme='light'] {
+  --bg:          #f5f4fa;
+  --bg2:         #eeedf5;
+  --bg3:         #e7e5f0;
+  --bg4:         #dddbe8;
+  --surface:     #ffffff;
+  --surface2:    #f0eeff;
+  --border:      rgba(0,0,0,0.07);
+  --border2:     rgba(0,0,0,0.13);
+  --text:        #1a1730;
+  --text2:       #5a5575;
+  --text3:       #9d9ab5;
+  --accent-glow: rgba(124,92,252,0.10);
+  --red-bg:      rgba(252,92,125,0.08);
+  --green-bg:    rgba(92,252,180,0.08);
+  --amber-bg:    rgba(252,180,92,0.08);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+button { font-family: var(--font-body); }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.animate-fade-in-up { animation: fadeInUp 0.3s ease both; }
+.animate-delay-1    { animation-delay: 0.05s; }
+.animate-delay-2    { animation-delay: 0.10s; }
+.animate-delay-3    { animation-delay: 0.15s; }
+.animate-delay-4    { animation-delay: 0.20s; }

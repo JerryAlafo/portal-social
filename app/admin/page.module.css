@@ -1,0 +1,124 @@
+.page { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.body { flex: 1; overflow-y: auto; padding: 28px; display: flex; flex-direction: column; gap: 24px; }
+
+.statsRow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.statCard {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 20px;
+  animation: fadeInUp 0.3s ease both;
+}
+.statCard:nth-child(1) { animation-delay: 0.05s; }
+.statCard:nth-child(2) { animation-delay: 0.10s; }
+.statCard:nth-child(3) { animation-delay: 0.15s; }
+.statCard:nth-child(4) { animation-delay: 0.20s; }
+@keyframes fadeInUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+.statTop { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.statLabel { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); font-family: var(--font-display); }
+.statValue { font-family: var(--font-display); font-size: 32px; font-weight: 800; color: var(--text); line-height: 1; margin-bottom: 6px; }
+.statDanger { color: var(--red) !important; }
+.statChange { font-size: 12px; color: var(--text3); display: flex; align-items: center; gap: 4px; }
+.changeUp { color: var(--green); }
+.changeDown { color: var(--red); }
+
+.twoCol { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
+.miniCol { display: flex; flex-direction: column; gap: 16px; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; }
+.cardHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.cardTitle { font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--text); }
+.badgeDanger { font-size: 11px; background: var(--red-bg); color: var(--red); padding: 3px 10px; border-radius: 20px; font-weight: 700; font-family: var(--font-display); }
+.badgeAmber  { font-size: 11px; background: var(--amber-bg); color: var(--amber); padding: 3px 10px; border-radius: 20px; font-weight: 700; font-family: var(--font-display); }
+.badgeGreen  { font-size: 11px; background: var(--green-bg); color: var(--green); padding: 3px 10px; border-radius: 20px; font-weight: 700; font-family: var(--font-display); }
+
+.emptyState { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 32px 0; color: var(--text3); font-size: 14px; }
+
+.reportItem { display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.reportItem:last-child { border-bottom: none; }
+.reportAvatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; font-family: var(--font-display); flex-shrink: 0; }
+.reportInfo { flex: 1; min-width: 0; }
+.reportName { font-size: 13px; font-weight: 600; color: var(--text); font-family: var(--font-display); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.reportText { font-size: 12px; color: var(--text2); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reportMeta { font-size: 11px; color: var(--text3); margin-top: 3px; }
+.reportBadge { padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; font-family: var(--font-display); }
+.badge_spam       { background: var(--amber-bg); color: var(--amber); }
+.badge_explicit   { background: var(--red-bg); color: var(--red); }
+.badge_harassment { background: rgba(232,121,249,0.12); color: var(--pink); }
+
+.reportActions { display: flex; flex-direction: column; gap: 5px; }
+.btnDelete, .btnWarn, .btnKeep {
+  display: flex; align-items: center; gap: 4px;
+  padding: 5px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 600; font-family: var(--font-display);
+  cursor: pointer; border: 1px solid; transition: all var(--transition);
+  background: transparent;
+}
+.btnDelete { color: var(--red); border-color: rgba(252,92,125,0.3); }
+.btnDelete:hover { background: var(--red-bg); }
+.btnWarn { color: var(--amber); border-color: rgba(252,180,92,0.3); }
+.btnWarn:hover { background: var(--amber-bg); }
+.btnKeep { color: var(--green); border-color: rgba(92,252,180,0.3); justify-content: center; }
+.btnKeep:hover { background: var(--green-bg); }
+
+/* Mini chart */
+.miniChart { display: flex; align-items: flex-end; gap: 4px; height: 60px; }
+.bar { flex: 1; background: var(--accent); border-radius: 3px 3px 0 0; opacity: 0.45; transition: opacity var(--transition); }
+.bar:hover { opacity: 1; }
+.barToday { background: var(--accent2); opacity: 1; }
+.chartLabels { display: flex; justify-content: space-between; margin-top: 6px; font-size: 10px; color: var(--text3); }
+.labelToday { color: var(--accent2); }
+
+/* Announcements */
+.announceItem { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.announceItem:last-child { border-bottom: none; }
+.announceInfo { flex: 1; }
+.announceTitle { font-size: 13px; font-weight: 600; color: var(--text); font-family: var(--font-display); }
+.announceMeta { font-size: 11px; color: var(--text3); margin-top: 3px; }
+.announceStatus { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; font-family: var(--font-display); white-space: nowrap; }
+.status_pinned    { background: rgba(124,92,252,0.15); color: var(--accent2); }
+.status_published { background: var(--green-bg); color: var(--green); }
+.status_draft     { background: var(--bg4); color: var(--text3); }
+
+/* Table */
+.tableWrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; }
+.table th { text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); font-family: var(--font-display); padding: 0 12px 12px; }
+.table td { padding: 10px 12px; border-top: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+.table tr:hover td { background: var(--bg3); }
+
+.userCell { display: flex; align-items: center; gap: 10px; }
+.userAvatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; font-family: var(--font-display); flex-shrink: 0; }
+.userName { font-size: 13px; font-weight: 600; color: var(--text); font-family: var(--font-display); }
+.userHandle { font-size: 11px; color: var(--text3); }
+
+.roleBadge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; font-family: var(--font-display); }
+.role_superuser { background: rgba(124,92,252,0.2); color: var(--accent2); }
+.role_mod    { background: var(--amber-bg); color: var(--amber); }
+.role_member { background: var(--bg4); color: var(--text3); }
+
+.statusDot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.dotOnline  { background: var(--green); }
+.dotOffline { background: var(--text3); }
+
+.tdMuted { color: var(--text2); }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .body { padding: 16px 12px; }
+}
+.tdFaint { color: var(--text3); font-size: 12px; }
+.ownerLabel { font-size: 11px; color: var(--text3); }
+.tableBtns { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.btnPromote, .btnDemote, .btnBan {
+  padding: 4px 12px; border-radius: 20px;
+  font-size: 11px; font-weight: 600; font-family: var(--font-display);
+  cursor: pointer; border: 1px solid; background: transparent;
+  transition: all var(--transition);
+}
+.btnPromote { color: var(--accent2); border-color: rgba(124,92,252,0.3); }
+.btnPromote:hover { background: var(--accent-glow); }
+.btnDemote { color: var(--red); border-color: rgba(252,92,125,0.3); }
+.btnDemote:hover { background: var(--red-bg); }
+.btnBan { color: var(--text3); border-color: var(--border); }
+.btnBan:hover { border-color: var(--red); color: var(--red); background: var(--red-bg); }

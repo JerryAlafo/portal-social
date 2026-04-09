@@ -1,0 +1,154 @@
+.page { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.body { flex: 1; display: flex; overflow: hidden; }
+.mainCol { flex: 1; overflow-y: auto; min-width: 0; }
+
+.banner {
+  height: 200px;
+  background: linear-gradient(135deg, #1a0840 0%, #0d1a40 40%, #0a2015 100%);
+  position: relative;
+  overflow: hidden;
+}
+.bannerOverlay {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 20% 50%, rgba(124,92,252,0.25) 0%, transparent 50%),
+    radial-gradient(circle at 80% 30%, rgba(232,121,249,0.15) 0%, transparent 40%),
+    radial-gradient(circle at 60% 80%, rgba(92,252,180,0.10) 0%, transparent 35%);
+}
+.bannerEditBtn {
+  position: absolute; bottom: 12px; right: 16px;
+  padding: 6px 14px;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 20px;
+  color: #fff; font-size: 12px; cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+  transition: background var(--transition);
+  font-family: var(--font-body);
+}
+.bannerEditBtn:hover { background: rgba(0,0,0,0.7); }
+
+.infoArea { padding: 0 28px 0; }
+.avatarRow { display: flex; align-items: flex-end; gap: 18px; margin-top: -50px; margin-bottom: 16px; flex-wrap: wrap; }
+.avatarWrap { position: relative; }
+.avatar {
+  width: 100px; height: 100px; border-radius: 50%;
+  background: #12092a; color: var(--accent2);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 32px; font-family: var(--font-display);
+  border: 3px solid var(--bg);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.avatarEditBtn {
+  position: absolute; bottom: 2px; right: 2px;
+  width: 28px; height: 28px;
+  background: var(--bg2); border: 2px solid var(--bg);
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text2);
+  transition: all var(--transition);
+}
+.avatarEditBtn:hover { background: var(--accent-glow); color: var(--accent2); }
+
+.nameMeta { flex: 1; padding-bottom: 8px; min-width: 200px; }
+.name {
+  font-family: var(--font-display); font-size: 24px; font-weight: 800; color: var(--text);
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.handle { font-size: 14px; color: var(--text3); margin-top: 2px; }
+.badges { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.badgeSU  { display: inline-flex; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; font-family: var(--font-display); background: rgba(124,92,252,0.2); color: var(--accent2); border: 1px solid rgba(124,92,252,0.3); }
+.badgeLevel { display: inline-flex; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; font-family: var(--font-display); background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(252,180,92,0.25); }
+.badgeVerified { display: inline-flex; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; font-family: var(--font-display); background: var(--green-bg); color: var(--green); border: 1px solid rgba(92,252,180,0.2); }
+
+.profileActions { display: flex; align-items: center; gap: 8px; padding-bottom: 8px; margin-left: auto; }
+.editBtn {
+  padding: 8px 20px; border-radius: 20px;
+  background: var(--accent); color: #fff; border: none;
+  font-size: 13px; font-weight: 600; font-family: var(--font-display);
+  cursor: pointer; transition: all var(--transition);
+}
+.editBtn:hover { background: var(--accent2); }
+.iconBtn {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--bg3); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text2);
+  transition: all var(--transition);
+}
+.iconBtn:hover { background: var(--bg4); color: var(--text); }
+
+.bio { font-size: 14px; color: var(--text2); line-height: 1.7; margin-bottom: 12px; max-width: 600px; }
+.details { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 16px; }
+.detail { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text3); }
+
+.stats { display: flex; gap: 28px; padding: 16px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.stat { cursor: pointer; }
+.stat:hover .statNum { color: var(--accent2); }
+.statNum { display: block; font-family: var(--font-display); font-size: 20px; font-weight: 800; color: var(--text); }
+.statLabel { display: block; font-size: 12px; color: var(--text3); }
+
+.tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 28px; }
+.tab {
+  padding: 14px 20px; font-size: 14px; font-weight: 500;
+  color: var(--text3); cursor: pointer;
+  border: none; border-bottom: 2px solid transparent;
+  background: transparent; transition: all var(--transition);
+  font-family: var(--font-display); margin-bottom: -1px;
+}
+.tab:hover { color: var(--text2); }
+.tabActive { color: var(--accent2) !important; border-bottom-color: var(--accent) !important; }
+
+.postsCol { display: flex; flex-direction: column; gap: 14px; padding: 24px 28px; max-width: 680px; }
+
+.galleryGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px; }
+.galleryCell {
+  aspect-ratio: 1; background: var(--bg4);
+  cursor: pointer; position: relative;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity var(--transition);
+}
+.galleryCell:hover .galleryOverlay { opacity: 1; }
+.galleryCell:nth-child(odd) { background: var(--bg3); }
+.galleryOverlay {
+  position: absolute; inset: 0;
+  background: rgba(124,92,252,0.2);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity var(--transition);
+}
+
+.fanficsCol { display: flex; flex-direction: column; gap: 12px; padding: 24px 28px; }
+.fanficCard {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 20px;
+  cursor: pointer; transition: border-color var(--transition);
+}
+.fanficCard:hover { border-color: var(--border2); }
+.fanficGenre { font-size: 11px; font-weight: 700; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+.fanficTitle { font-family: var(--font-display); font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.fanficDesc { font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 12px; }
+.fanficMeta { display: flex; gap: 16px; font-size: 12px; color: var(--text3); }
+
+.emptyTab { padding: 40px 28px; font-size: 14px; color: var(--text3); }
+
+/* Right col */
+.rightCol { width: 280px; flex-shrink: 0; border-left: 1px solid var(--border); padding: 24px 18px; background: var(--bg2); overflow-y: auto; }
+.panelTitle { font-family: var(--font-display); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.3px; color: var(--text3); margin-bottom: 14px; }
+
+.animeItem { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.animeItem:last-of-type { border-bottom: none; }
+.animePoster { width: 36px; height: 50px; background: var(--bg4); border-radius: 4px; flex-shrink: 0; }
+.animeTitle { font-size: 13px; font-weight: 600; color: var(--text); font-family: var(--font-display); }
+.animeSub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+.followerItem { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.followerItem:last-child { border-bottom: none; }
+.followerAvatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; font-family: var(--font-display); flex-shrink: 0; }
+.followerName { flex: 1; font-size: 13px; color: var(--text); }
+.followerTime { font-size: 11px; color: var(--text3); }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .body { flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+  .mainCol { overflow-y: visible; }
+  .rightCol { width: 100%; border-left: none; border-top: 1px solid var(--border); overflow-y: visible; padding: 20px 12px; }
+}

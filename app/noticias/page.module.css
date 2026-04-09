@@ -1,0 +1,55 @@
+.page { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.body { flex: 1; display: flex; overflow: hidden; }
+.mainCol { flex: 1; overflow-y: auto; padding: 24px 20px; min-width: 0; }
+
+.cats { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
+.catBtn { padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border); background: var(--bg3); color: var(--text2); font-size: 13px; font-weight: 500; font-family: var(--font-display); cursor: pointer; transition: all var(--transition); }
+.catBtn:hover { border-color: var(--accent); color: var(--accent2); }
+.catActive { border-color: var(--accent) !important; color: var(--accent2) !important; background: var(--accent-glow) !important; }
+
+.section { margin-bottom: 28px; }
+.sectionLabel { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; font-family: var(--font-display); margin-bottom: 12px; }
+
+.newsCard {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 20px;
+  margin-bottom: 14px; transition: border-color var(--transition); cursor: pointer;
+}
+.newsCard:hover { border-color: var(--border2); }
+.pinnedCard { border-color: var(--accent); }
+.pinnedCard:hover { border-color: var(--accent2); }
+
+.pinnedTag { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; color: var(--accent2); text-transform: uppercase; letter-spacing: 0.8px; font-family: var(--font-display); margin-bottom: 8px; }
+
+.newsMeta { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+.newsCat { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; font-family: var(--font-display); }
+.newsTime { font-size: 12px; color: var(--text3); }
+.newsReads { font-size: 12px; color: var(--text3); margin-left: auto; }
+
+.newsTitle { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 10px; line-height: 1.3; }
+.newsSummary { font-size: 14px; color: var(--text2); line-height: 1.7; margin-bottom: 14px; }
+
+.newsFooter { display: flex; align-items: center; justify-content: space-between; }
+.newsAuthor { font-size: 13px; color: var(--text3); display: flex; align-items: center; gap: 6px; }
+.newsAuthor strong { color: var(--text2); }
+.badgeSU { font-size: 10px; font-weight: 700; background: var(--accent); color: #fff; padding: 1px 7px; border-radius: 10px; font-family: var(--font-display); }
+.badgeMod { font-size: 10px; font-weight: 700; background: var(--amber-bg); color: var(--amber); padding: 1px 7px; border-radius: 10px; font-family: var(--font-display); border: 1px solid rgba(252,180,92,0.3); }
+
+.readMore { display: flex; align-items: center; gap: 5px; padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--text2); font-size: 12px; cursor: pointer; transition: all var(--transition); font-family: var(--font-body); }
+.readMore:hover { border-color: var(--accent); color: var(--accent2); }
+
+.rightPanel { width: 260px; flex-shrink: 0; border-left: 1px solid var(--border); padding: 24px 16px; background: var(--bg2); overflow-y: auto; }
+.panelTitle { font-family: var(--font-display); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.3px; color: var(--text3); margin-bottom: 14px; }
+.topItem { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+.topItem:last-child { border-bottom: none; }
+.topItem:hover .topTitle { color: var(--accent2); }
+.topRank { font-size: 18px; font-weight: 800; color: var(--bg4); font-family: var(--font-display); width: 26px; text-align: right; flex-shrink: 0; line-height: 1.2; }
+.topTitle { font-size: 12px; font-weight: 600; color: var(--text); font-family: var(--font-display); line-height: 1.4; margin-bottom: 3px; }
+.topMeta { font-size: 11px; color: var(--text3); }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .body { flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+  .mainCol { overflow-y: visible; padding: 16px 12px; }
+  .rightPanel { width: 100%; border-left: none; border-top: 1px solid var(--border); overflow-y: visible; padding: 20px 12px; }
+}

@@ -1,0 +1,300 @@
+.topbar {
+  height: 58px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 12px;
+  background: var(--bg2);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.burgerBtn {
+  display: none;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid var(--border);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text2);
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+
+.burgerBtn:hover {
+  background: var(--bg4);
+  color: var(--text);
+  border-color: var(--border2);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--text);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 0 14px;
+  height: 36px;
+  width: 240px;
+  transition: border-color var(--transition);
+}
+
+.searchBar:focus-within {
+  border-color: var(--accent);
+}
+
+.searchBar input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 13px;
+  flex: 1;
+  min-width: 0;
+}
+
+.searchBar input::placeholder { color: var(--text3); }
+
+/* search icon button — only on mobile */
+.searchToggle {
+  display: none;
+}
+
+.iconBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text2);
+  transition: all var(--transition);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.iconBtn:hover {
+  background: var(--bg3);
+  color: var(--text);
+  border-color: var(--border2);
+}
+
+.notifDot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  background: var(--red);
+  border-radius: 50%;
+  border: 1.5px solid var(--bg2);
+}
+
+.themeBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  height: 34px;
+  border-radius: 20px;
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--font-body);
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+
+.themeBtn:hover {
+  background: var(--accent-glow);
+  color: var(--accent2);
+  border-color: var(--accent);
+}
+
+/* Notification Panel */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 50;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+.notifPanel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 360px;
+  background: var(--bg2);
+  border-left: 1px solid var(--border);
+  z-index: 51;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+}
+
+.notifOpen {
+  transform: translateX(0);
+}
+
+.notifHeader {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.notifTitle {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  flex: 1;
+}
+
+.closeBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text2);
+  transition: all var(--transition);
+}
+
+.closeBtn:hover { background: var(--bg3); color: var(--text); }
+
+.notifList { flex: 1; overflow-y: auto; }
+
+.notifItem {
+  display: flex;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.notifItem:hover { background: var(--bg3); }
+.notifItem.unread { background: rgba(124,92,252,0.05); }
+.notifItem.unread:hover { background: rgba(124,92,252,0.1); }
+
+.notifAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-display);
+  flex-shrink: 0;
+}
+
+.notifContent { flex: 1; }
+
+.notifText {
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.5;
+}
+
+.notifTime {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 3px;
+  display: block;
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .topbar {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .burgerBtn {
+    display: flex;
+  }
+
+  /* hide the inline search bar on mobile */
+  .searchBar {
+    display: none;
+  }
+
+  /* show full-width search bar when toggled open on mobile */
+  .searchOpen {
+    display: flex;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 58px;
+    width: 100%;
+    border-radius: 0;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    z-index: 10;
+    background: var(--bg2);
+  }
+
+  /* show the search toggle icon button on mobile */
+  .searchToggle {
+    display: flex;
+  }
+
+  /* hide theme button label text on mobile — keep icon only */
+  .themeBtnLabel {
+    display: none;
+  }
+
+  .themeBtn {
+    padding: 0 10px;
+    width: 36px;
+    height: 34px;
+    border-radius: 50%;
+    justify-content: center;
+  }
+
+  /* notification panel full-width on mobile */
+  .notifPanel {
+    width: 100%;
+    max-width: 360px;
+  }
+}
