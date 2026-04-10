@@ -1,64 +1,134 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import { Loader2 } from 'lucide-react'
 import Topbar from '@/components/layout/Topbar'
-import PostCard from '@/components/posts/PostCard'
-import { mockPosts } from '@/lib/mock-data'
-import styles from './page.module.css'
-
-const FOLLOWING = [
-  { name: 'YukiSenpai', initials: 'YS', bg: '#1a1000', color: '#fcb45c', online: true },
-  { name: 'AkiraFan99', initials: 'AK', bg: '#0a2015', color: '#5cfcb4', online: true },
-  { name: 'SakuraHime', initials: 'SH', bg: '#1a0010', color: '#fc5c7d', online: false },
-  { name: 'NaruZuki',   initials: 'NZ', bg: '#0a0a2a', color: '#7c5cfc', online: false },
-  { name: 'OtakuRei',   initials: 'OR', bg: '#1a0030', color: '#e879f9', online: true },
-]
+import { getFollowing, unfollowUser } from '@/services/following'
+import { getFeed } from '@/services/posts'
+import type { Profile, Post } from '@/types'
 
 export default function SeguindoPage() {
-  const feed = mockPosts.filter(p => !p.isPinned)
+  const { data: session } = useSession()
+  const [following, setFollowing] = useState<Profile[]>([])
+  const [posts, setPosts] = useState<Post[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadData() {
+      if (!session?.user?.id) return
+      setLoading(true)
+      try {
+        const [followingRes, feedRes] = await Promise.all([
+          getFollowing(),
+          getFeed(1, 20, 'Following'),
+        ])
+        if (followingRes.data) setFollowing(followingRes.data)
+        if (feedRes.data) setPosts(feedRes.data)
+      } catch { /* ignore */ }
+      finally { setLoading(false) }
+    }
+    loadData()
+  }, [session?.user?.id])
+
+  const handleUnfollow = async (userId: string, username: string) => {
+    try {
+      await unfollowUser(userId)
+      setFollowing(prev => prev.filter(f => f.id !== userId))
+    } catch { /* ignore */ }
+  }
+
+  const onlineFollowing = following.filter(f => f.is_online)
+  const othersFollowing = following.filter(f => !f.is_online)
 
   return (
-    <div className={styles.page}>
+    <div className="seguindo-page">
       <Topbar title="A Seguir" />
-      <div className={styles.body}>
-        <div className={styles.feedCol}>
-          {/* Online bubbles */}
-          <div className={styles.onlineBar}>
-            <span className={styles.onlineLabel}>Online agora</span>
-            <div className={styles.onlineList}>
-              {FOLLOWING.filter(f => f.online).map(f => (
-                <div key={f.name} className={styles.onlineBubble}>
-                  <div className={styles.onlineAvatar} style={{ background: f.bg, color: f.color }}>{f.initials}</div>
-                  <div className={styles.onlineDot} />
-                  <span className={styles.onlineName}>{f.name}</span>
-                </div>
-              ))}
+      <div className="seguindo-body">
+        <div className="seguindo-feed-col">
+          {loading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+              <Loader2 size={24} className="spin" />
             </div>
-          </div>
+          ) : (
+            <>
+              {onlineFollowing.length > 0 && (
+                <div className="seguindo-online-bar">
+                  <span className="seguindo-online-label">Online agora</span>
+                  <div className="seguindo-online-list">
+                    {onlineFollowing.map(f => (
+                      <div key={f.id} className="seguindo-online-bubble">
+                        <div className="seguindo-online-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
+                          {f.avatar_initials || f.display_name?.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div className="seguindo-online-dot" />
+                        <span className="seguindo-online-name">{f.display_name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-          <p className={styles.feedLabel}>Publicacoes recentes de quem segues</p>
+              <p className="seguindo-feed-label">Publicacoes recentes de quem segues</p>
 
-          <div className={styles.posts}>
-            {feed.map((p, i) => (
-              <div key={p.id} className={`animate-fade-in-up animate-delay-${Math.min(i+1,4)}`}>
-                <PostCard post={p} />
+              <div className="seguindo-posts">
+                {posts.length === 0 ? (
+                  <p style={{ color: 'var(--text3)', fontSize: 14 }}>Ainda nao ha publicacoes de quem segues.</p>
+                ) : posts.map((p, i) => (
+                  <div key={p.id} className={`animate-fade-in-up animate-delay-${Math.min(i + 1, 4)}`}>
+                    <div className="post-card">
+                      <div className="post-header">
+                        <div className="post-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
+                          {p.author.avatar_url
+                            ? <img src={p.author.avatar_url} alt={p.author.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                            : p.author.avatar_initials}
+                        </div>
+                        <div className="post-author-info">
+                          <div className="post-author-name">
+                            {p.author.display_name}
+                            {p.author.role === 'superuser' && <span className="post-badge-su">Super User</span>}
+                            {p.author.role === 'mod' && <span className="post-badge-mod">Moderador</span>}
+                          </div>
+                          <div className="post-meta">
+                            <span>@{p.author.username}</span>
+                            {p.category && <span>{p.category}</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="post-body">
+                        <p className="post-text">{p.content}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          )}
         </div>
 
-        <aside className={styles.rightPanel}>
-          <p className={styles.panelTitle}>A seguir ({FOLLOWING.length})</p>
-          {FOLLOWING.map(f => (
-            <div key={f.name} className={styles.followItem}>
-              <div className={styles.followAvatarWrap}>
-                <div className={styles.followAvatar} style={{ background: f.bg, color: f.color }}>{f.initials}</div>
-                {f.online && <span className={styles.onlineDotSmall} />}
+        <aside className="seguindo-right-panel">
+          <p className="seguindo-panel-title">A seguir ({following.length})</p>
+          {following.length === 0 ? (
+            <p style={{ color: 'var(--text3)', fontSize: 13 }}>Ainda nao segues ninguem.</p>
+          ) : (
+            [...onlineFollowing, ...othersFollowing].map(f => (
+              <div key={f.id} className="seguindo-follow-item">
+                <div className="seguindo-follow-avatar-wrap">
+                  <div className="seguindo-follow-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
+                    {f.avatar_initials || f.display_name?.slice(0, 2).toUpperCase()}
+                  </div>
+                  {f.is_online && <span className="seguindo-online-dot-small" />}
+                </div>
+                <span className="seguindo-follow-name">{f.display_name}</span>
+                <button
+                  className="seguindo-unfollow-btn"
+                  onClick={() => handleUnfollow(f.id, f.username)}
+                >
+                  Deixar de seguir
+                </button>
               </div>
-              <span className={styles.followName}>{f.name}</span>
-              <button className={styles.unfollowBtn}>Deixar de seguir</button>
-            </div>
-          ))}
+            ))
+          )}
         </aside>
       </div>
     </div>

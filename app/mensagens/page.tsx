@@ -1,129 +1,122 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { Search, Send, Phone, Video, MoreHorizontal, Smile, Paperclip, Check, CheckCheck, ArrowLeft } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
+import { Search, Send, Phone, Video, MoreHorizontal, Smile, Paperclip, Check, CheckCheck, ArrowLeft, Loader } from 'lucide-react'
 import Topbar from '@/components/layout/Topbar'
+import { getConversations, getMessages, sendMessage } from '@/services/messages'
+import type { Conversation, Message } from '@/types'
 import styles from './page.module.css'
 
-interface Message {
-  id: string
-  text: string
-  time: string
-  mine: boolean
-  read: boolean
-}
-
-interface Conversation {
-  id: string
-  name: string
-  handle: string
-  initials: string
-  bg: string
-  color: string
-  online: boolean
-  lastMsg: string
-  lastTime: string
-  unread: number
-  messages: Message[]
-}
-
-const CONVERSATIONS: Conversation[] = [
-  {
-    id: 'c1', name: 'YukiSenpai', handle: '@yukisenpai', initials: 'YS',
-    bg: '#1a1000', color: '#fcb45c', online: true,
-    lastMsg: 'Viste o ultimo episodio?', lastTime: '2 min', unread: 3,
-    messages: [
-      { id: 'm1', text: 'Ola! Viste o episodio desta semana de Demon Slayer?', time: '14:20', mine: false, read: true },
-      { id: 'm2', text: 'Ainda nao, estou a guardar para ver com calma hoje a noite', time: '14:21', mine: true, read: true },
-      { id: 'm3', text: 'Vai ser insano, juro. A animacao do Ufotable desta vez esta noutra dimensao', time: '14:22', mine: false, read: true },
-      { id: 'm4', text: 'Agora fiquei com demasiada expectativa haha', time: '14:23', mine: true, read: true },
-      { id: 'm5', text: 'Merece toda a hype, acredita. Depois dizes-me o que achaste!', time: '14:25', mine: false, read: true },
-      { id: 'm6', text: 'Viste o ultimo episodio?', time: '14:50', mine: false, read: false },
-    ],
-  },
-  {
-    id: 'c2', name: 'AkiraFan99', handle: '@akirafan99', initials: 'AK',
-    bg: '#0a2015', color: '#5cfcb4', online: true,
-    lastMsg: 'Obrigado pela recomendacao!', lastTime: '1h', unread: 0,
-    messages: [
-      { id: 'm1', text: 'Ja viste Frieren? Deves adorar', time: '12:00', mine: true, read: true },
-      { id: 'm2', text: 'Acabei agora mesmo os 28 episodios de uma assentada', time: '13:30', mine: false, read: true },
-      { id: 'm3', text: 'E?!', time: '13:31', mine: true, read: true },
-      { id: 'm4', text: 'Obrigado pela recomendacao!', time: '13:32', mine: false, read: true },
-    ],
-  },
-  {
-    id: 'c3', name: 'SakuraHime', handle: '@sakurahime', initials: 'SH',
-    bg: '#1a0010', color: '#fc5c7d', online: false,
-    lastMsg: 'Quando e o proximo evento?', lastTime: '3h', unread: 1,
-    messages: [
-      { id: 'm1', text: 'Ola! Vi o teu cosplay da Nezuko, ficou incrivel', time: '10:00', mine: true, read: true },
-      { id: 'm2', text: 'Obrigada!! Levei muito tempo mas valeu a pena', time: '10:05', mine: false, read: true },
-      { id: 'm3', text: 'Quando e o proximo evento?', time: '10:06', mine: false, read: false },
-    ],
-  },
-  {
-    id: 'c4', name: 'NaruZuki', handle: '@naruzuki', initials: 'NZ',
-    bg: '#0a0a2a', color: '#7c5cfc', online: false,
-    lastMsg: 'Boa noite!', lastTime: 'Ontem', unread: 0,
-    messages: [
-      { id: 'm1', text: 'Boa noite!', time: 'Ontem', mine: false, read: true },
-    ],
-  },
-  {
-    id: 'c5', name: 'OtakuRei', handle: '@otakulei', initials: 'OR',
-    bg: '#1a0030', color: '#e879f9', online: true,
-    lastMsg: 'Tens de ver Blue Lock!', lastTime: '2 dias', unread: 0,
-    messages: [
-      { id: 'm1', text: 'Tens de ver Blue Lock!', time: '2 dias', mine: false, read: true },
-    ],
-  },
-]
-
 export default function MensagensPage() {
-  const [activeId, setActiveId] = useState('c1')
-  const [convos, setConvos] = useState(CONVERSATIONS)
+  const { data: session } = useSession()
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [activeConv, setActiveConv] = useState<Conversation | null>(null)
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [search, setSearch] = useState('')
   const [chatOpen, setChatOpen] = useState(false)
+  const [loadingConvs, setLoadingConvs] = useState(true)
+  const [loadingMsgs, setLoadingMsgs] = useState(false)
+  const [sending, setSending] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const active = convos.find(c => c.id === activeId)!
+  // Load conversations
+  useEffect(() => {
+    getConversations()
+      .then(res => { if (res.data) setConversations(res.data) })
+      .catch(() => {})
+      .finally(() => setLoadingConvs(false))
+  }, [])
+
+  // Load messages when conversation changes
+  const loadMessages = useCallback(async (conv: Conversation) => {
+    setLoadingMsgs(true)
+    try {
+      const res = await getMessages(conv.id)
+      if (res.data) setMessages(res.data)
+    } catch {
+      setMessages([])
+    } finally {
+      setLoadingMsgs(false)
+    }
+  }, [])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [activeId, active?.messages.length])
+  }, [messages])
 
-  const selectConvo = (id: string) => {
-    setActiveId(id)
+  const selectConvo = async (conv: Conversation) => {
+    setActiveConv(conv)
     setChatOpen(true)
-    setConvos(prev => prev.map(c =>
-      c.id === id ? { ...c, unread: 0 } : c
-    ))
+    // Mark as read locally
+    setConversations(prev =>
+      prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c)
+    )
+    await loadMessages(conv)
   }
 
-  const sendMessage = () => {
+  const handleSend = async () => {
     const text = input.trim()
-    if (!text) return
-    const newMsg: Message = {
-      id: Date.now().toString(),
-      text,
-      time: new Date().toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
-      mine: true,
-      read: false,
+    if (!text || !activeConv || sending) return
+    setSending(true)
+
+    // Optimistic message
+    const optimistic: Message = {
+      id: `tmp-${Date.now()}`,
+      conversation_id: activeConv.id,
+      sender_id: session?.user?.id ?? '',
+      content: text,
+      is_read: false,
+      created_at: new Date().toISOString(),
     }
-    setConvos(prev => prev.map(c =>
-      c.id === activeId
-        ? { ...c, messages: [...c.messages, newMsg], lastMsg: text, lastTime: 'Agora' }
-        : c
-    ))
+    setMessages(prev => [...prev, optimistic])
     setInput('')
+
+    try {
+      const res = await sendMessage(activeConv.id, text)
+      if (res.data) {
+        setMessages(prev => prev.map(m => m.id === optimistic.id ? res.data! : m))
+      }
+      // Update last message in conversation list
+      setConversations(prev =>
+        prev.map(c =>
+          c.id === activeConv.id
+            ? { ...c, last_message: { content: text, created_at: optimistic.created_at, sender_id: optimistic.sender_id } }
+            : c
+        )
+      )
+    } catch {
+      // Remove optimistic message on failure
+      setMessages(prev => prev.filter(m => m.id !== optimistic.id))
+      setInput(text)
+    } finally {
+      setSending(false)
+    }
   }
 
-  const filtered = convos.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.handle.toLowerCase().includes(search.toLowerCase())
+  const formatTime = (dateStr: string) => {
+    const d = new Date(dateStr)
+    return d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })
+  }
+
+  const formatConvTime = (dateStr: string | undefined) => {
+    if (!dateStr) return ''
+    const diff = Date.now() - new Date(dateStr).getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1)  return 'Agora'
+    if (mins < 60) return `${mins} min`
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24)  return `${hrs}h`
+    return 'Ontem'
+  }
+
+  const filtered = conversations.filter(c =>
+    c.other_user.display_name.toLowerCase().includes(search.toLowerCase()) ||
+    c.other_user.username.toLowerCase().includes(search.toLowerCase())
   )
+
+  const myId = session?.user?.id
 
   return (
     <div className={styles.page}>
@@ -141,27 +134,32 @@ export default function MensagensPage() {
               onChange={e => setSearch(e.target.value)}
             />
           </div>
+
           <div className={styles.convList}>
-            {filtered.map(c => (
+            {loadingConvs ? (
+              <div className={styles.listLoading}><Loader size={20} /></div>
+            ) : filtered.length === 0 ? (
+              <p className={styles.listEmpty}>Nenhuma conversa ainda.</p>
+            ) : filtered.map(c => (
               <div
                 key={c.id}
-                className={`${styles.convItem} ${c.id === activeId ? styles.convActive : ''}`}
-                onClick={() => selectConvo(c.id)}
+                className={`${styles.convItem} ${activeConv?.id === c.id ? styles.convActive : ''}`}
+                onClick={() => selectConvo(c)}
               >
                 <div className={styles.convAvatarWrap}>
-                  <div className={styles.convAvatar} style={{ background: c.bg, color: c.color }}>
-                    {c.initials}
+                  <div className={styles.convAvatar} style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
+                    {c.other_user.avatar_initials}
                   </div>
-                  {c.online && <span className={styles.onlineDot} />}
+                  {c.other_user.is_online && <span className={styles.onlineDot} />}
                 </div>
                 <div className={styles.convInfo}>
                   <div className={styles.convTop}>
-                    <span className={styles.convName}>{c.name}</span>
-                    <span className={styles.convTime}>{c.lastTime}</span>
+                    <span className={styles.convName}>{c.other_user.display_name}</span>
+                    <span className={styles.convTime}>{formatConvTime(c.last_message?.created_at)}</span>
                   </div>
                   <div className={styles.convBottom}>
-                    <span className={styles.convLast}>{c.lastMsg}</span>
-                    {c.unread > 0 && <span className={styles.unreadBadge}>{c.unread}</span>}
+                    <span className={styles.convLast}>{c.last_message?.content ?? 'Sem mensagens ainda'}</span>
+                    {c.unread_count > 0 && <span className={styles.unreadBadge}>{c.unread_count}</span>}
                   </div>
                 </div>
               </div>
@@ -171,80 +169,91 @@ export default function MensagensPage() {
 
         {/* Chat window */}
         <div className={`${styles.chatWindow} ${chatOpen ? styles.chatVisible : ''}`}>
-          {/* Chat header */}
-          <div className={styles.chatHeader}>
-            <button className={styles.backBtn} onClick={() => setChatOpen(false)} aria-label="Voltar">
-              <ArrowLeft size={18} />
-            </button>
-            <div className={styles.chatAvatarWrap}>
-              <div className={styles.chatAvatar} style={{ background: active.bg, color: active.color }}>
-                {active.initials}
-              </div>
-              {active.online && <span className={styles.onlineDot} />}
+          {!activeConv ? (
+            <div className={styles.noChat}>
+              <p>Seleciona uma conversa para começar.</p>
             </div>
-            <div className={styles.chatHeaderInfo}>
-              <span className={styles.chatName}>{active.name}</span>
-              <span className={styles.chatStatus}>{active.online ? 'Online agora' : 'Offline'}</span>
-            </div>
-            <div className={styles.chatHeaderActions}>
-              <button className={styles.headerBtn}><Phone size={16} /></button>
-              <button className={styles.headerBtn}><Video size={16} /></button>
-              <button className={styles.headerBtn}><MoreHorizontal size={16} /></button>
-            </div>
-          </div>
-
-          {/* Messages */}
-          <div className={styles.messages}>
-            {active.messages.map((msg, i) => {
-              const showDate = i === 0 || active.messages[i-1].time !== msg.time
-              return (
-                <div key={msg.id}>
-                  {i === 0 && (
-                    <div className={styles.dateDivider}>Hoje</div>
-                  )}
-                  <div className={`${styles.msgRow} ${msg.mine ? styles.msgMine : ''}`}>
-                    {!msg.mine && (
-                      <div className={styles.msgAvatar} style={{ background: active.bg, color: active.color }}>
-                        {active.initials}
-                      </div>
-                    )}
-                    <div className={styles.msgBubble}>
-                      <p className={styles.msgText}>{msg.text}</p>
-                      <div className={styles.msgMeta}>
-                        <span className={styles.msgTime}>{msg.time}</span>
-                        {msg.mine && (
-                          msg.read
-                            ? <CheckCheck size={12} color="var(--accent2)" />
-                            : <Check size={12} color="var(--text3)" />
-                        )}
-                      </div>
-                    </div>
+          ) : (
+            <>
+              {/* Chat header */}
+              <div className={styles.chatHeader}>
+                <button className={styles.backBtn} onClick={() => setChatOpen(false)} aria-label="Voltar">
+                  <ArrowLeft size={18} />
+                </button>
+                <div className={styles.chatAvatarWrap}>
+                  <div className={styles.chatAvatar} style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
+                    {activeConv.other_user.avatar_initials}
                   </div>
+                  {activeConv.other_user.is_online && <span className={styles.onlineDot} />}
                 </div>
-              )
-            })}
-            <div ref={messagesEndRef} />
-          </div>
+                <div className={styles.chatHeaderInfo}>
+                  <span className={styles.chatName}>{activeConv.other_user.display_name}</span>
+                  <span className={styles.chatStatus}>{activeConv.other_user.is_online ? 'Online agora' : 'Offline'}</span>
+                </div>
+                <div className={styles.chatHeaderActions}>
+                  <button className={styles.headerBtn}><Phone size={16} /></button>
+                  <button className={styles.headerBtn}><Video size={16} /></button>
+                  <button className={styles.headerBtn}><MoreHorizontal size={16} /></button>
+                </div>
+              </div>
 
-          {/* Input */}
-          <div className={styles.inputArea}>
-            <button className={styles.inputBtn}><Paperclip size={16} /></button>
-            <input
-              className={styles.msgInput}
-              type="text"
-              placeholder={`Mensagem para ${active.name}...`}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && sendMessage()}
-            />
-            <button className={styles.inputBtn}><Smile size={16} /></button>
-            <button
-              className={`${styles.sendBtn} ${input.trim() ? styles.sendActive : ''}`}
-              onClick={sendMessage}
-            >
-              <Send size={15} />
-            </button>
-          </div>
+              {/* Messages */}
+              <div className={styles.messages}>
+                {loadingMsgs ? (
+                  <div className={styles.msgsLoading}><Loader size={20} /></div>
+                ) : (
+                  <>
+                    <div className={styles.dateDivider}>Hoje</div>
+                    {messages.map(msg => {
+                      const isMine = msg.sender_id === myId
+                      return (
+                        <div key={msg.id} className={`${styles.msgRow} ${isMine ? styles.msgMine : ''}`}>
+                          {!isMine && (
+                            <div className={styles.msgAvatar} style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
+                              {activeConv.other_user.avatar_initials}
+                            </div>
+                          )}
+                          <div className={styles.msgBubble}>
+                            <p className={styles.msgText}>{msg.content}</p>
+                            <div className={styles.msgMeta}>
+                              <span className={styles.msgTime}>{formatTime(msg.created_at)}</span>
+                              {isMine && (
+                                msg.is_read
+                                  ? <CheckCheck size={12} color="var(--accent2)" />
+                                  : <Check size={12} color="var(--text3)" />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                    <div ref={messagesEndRef} />
+                  </>
+                )}
+              </div>
+
+              {/* Input */}
+              <div className={styles.inputArea}>
+                <button className={styles.inputBtn}><Paperclip size={16} /></button>
+                <input
+                  className={styles.msgInput}
+                  type="text"
+                  placeholder={`Mensagem para ${activeConv.other_user.display_name}...`}
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSend()}
+                />
+                <button className={styles.inputBtn}><Smile size={16} /></button>
+                <button
+                  className={`${styles.sendBtn} ${input.trim() ? styles.sendActive : ''}`}
+                  onClick={handleSend}
+                  disabled={sending}
+                >
+                  {sending ? <Loader size={15} /> : <Send size={15} />}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

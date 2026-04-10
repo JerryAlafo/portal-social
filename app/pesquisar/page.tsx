@@ -1,66 +1,66 @@
 'use client'
 
-import { useState } from 'react'
-import { Search, TrendingUp, Hash, User, FileText, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, TrendingUp, Hash, User, FileText, X, Loader2 } from 'lucide-react'
 import Topbar from '@/components/layout/Topbar'
-import PostCard from '@/components/posts/PostCard'
-import { mockPosts } from '@/lib/mock-data'
-import styles from './page.module.css'
+import { search } from '@/services/search'
+import { getTrending } from '@/services/trending'
+import { followUser } from '@/services/following'
+import type { Profile, Post, TrendingTag } from '@/types'
 
 const TABS = ['Tudo', 'Publicacoes', 'Membros', 'Tags', 'Fanfics']
 
-const POPULAR_TAGS = [
-  { tag: 'DemonSlayer', count: '4.2k' },
-  { tag: 'Frieren', count: '3.8k' },
-  { tag: 'JujutsuKaisen', count: '2.9k' },
-  { tag: 'OnePiece', count: '2.4k' },
-  { tag: 'Cosplay', count: '1.7k' },
-  { tag: 'Nendoroid', count: '1.2k' },
-  { tag: 'Isekai', count: '987' },
-  { tag: 'Shonen', count: '876' },
-  { tag: 'SoloLeveling', count: '756' },
-  { tag: 'BlueLock', count: '643' },
-  { tag: 'Manga', count: '598' },
-  { tag: 'AMV', count: '412' },
-]
-
-const USERS_RESULT = [
-  { name: 'AkiraFan99', handle: '@akirafan99', initials: 'AK', bg: '#0a2015', color: '#5cfcb4', followers: '1.2k', bio: 'Otaku desde sempre. Fan de Shonen e Slice of Life.' },
-  { name: 'SakuraHime', handle: '@sakurahime', initials: 'SH', bg: '#1a0010', color: '#fc5c7d', followers: '3.4k', bio: 'Cosplayer profissional. Adoro Demon Slayer e Naruto.' },
-  { name: 'YukiSenpai', handle: '@yukisenpai', initials: 'YS', bg: '#1a1000', color: '#fcb45c', followers: '2.1k', bio: 'Moderadora do PORTAL. Especialista em anime seinen.' },
-  { name: 'NaruZuki', handle: '@naruzuki', initials: 'NZ', bg: '#0a0a2a', color: '#7c5cfc', followers: '890', bio: 'Leitor de manga. One Piece e HxH para sempre.' },
-]
+function fmt(n: number) {
+  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n)
+}
 
 export default function PesquisarPage() {
   const [query, setQuery] = useState('')
   const [activeTab, setActiveTab] = useState('Tudo')
+  const [loading, setLoading] = useState(false)
+  const [results, setResults] = useState<{ users: Profile[]; posts: Post[]; tags: TrendingTag[] }>({ users: [], posts: [], tags: [] })
+  const [trending, setTrending] = useState<TrendingTag[]>([])
   const [followed, setFollowed] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    getTrending().then(r => { if (r.data) setTrending(r.data) }).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    async function doSearch() {
+      if (!query.trim()) {
+        setResults({ users: [], posts: [], tags: [] })
+        return
+      }
+      setLoading(true)
+      try {
+        const res = await search(query.trim())
+        if (res.data) setResults(res.data)
+      } catch { /* ignore */ }
+      finally { setLoading(false) }
+    }
+    const timeout = setTimeout(doSearch, 300)
+    return () => clearTimeout(timeout)
+  }, [query])
 
   const hasQuery = query.trim().length > 0
 
-  const filteredPosts = mockPosts.filter(p =>
-    p.text.toLowerCase().includes(query.toLowerCase()) ||
-    p.tags?.some(t => t.toLowerCase().includes(query.toLowerCase()))
-  )
-
-  const filteredUsers = USERS_RESULT.filter(u =>
-    u.name.toLowerCase().includes(query.toLowerCase()) ||
-    u.handle.toLowerCase().includes(query.toLowerCase())
-  )
-
-  const filteredTags = POPULAR_TAGS.filter(t =>
-    t.tag.toLowerCase().includes(query.toLowerCase())
-  )
+  const handleFollow = async (userId: string, username: string) => {
+    const next = new Set(followed)
+    next.has(username) ? next.delete(username) : next.add(username)
+    setFollowed(next)
+    try { await followUser(userId) } catch { /* revert on failure */ }
+  }
 
   return (
-    <div className={styles.page}>
+    <div className="pesquisar-page">
       <Topbar title="Pesquisar" />
 
-      <div className={styles.body}>
-        <div className={styles.mainCol}>
+      <div className="pesquisar-body">
+        <div className="pesquisar-main-col">
           {/* Search bar */}
-          <div className={styles.searchWrap}>
-            <div className={styles.searchBar}>
+          <div className="pesquisar-search-wrap">
+            <div className="pesquisar-search-bar">
               <Search size={16} color="var(--text3)" />
               <input
                 autoFocus
@@ -70,7 +70,7 @@ export default function PesquisarPage() {
                 onChange={e => setQuery(e.target.value)}
               />
               {query && (
-                <button className={styles.clearBtn} onClick={() => setQuery('')}>
+                <button className="pesquisar-clear-btn" onClick={() => setQuery('')}>
                   <X size={14} />
                 </button>
               )}
@@ -79,30 +79,37 @@ export default function PesquisarPage() {
 
           {/* Tabs */}
           {hasQuery && (
-            <div className={styles.tabs}>
+            <div className="pesquisar-tabs">
               {TABS.map(t => (
                 <button
                   key={t}
-                  className={`${styles.tab} ${activeTab === t ? styles.tabActive : ''}`}
+                  className={`pesquisar-tab ${activeTab === t ? 'pesquisar-tab-active' : ''}`}
                   onClick={() => setActiveTab(t)}
                 >{t}</button>
               ))}
             </div>
           )}
 
+          {/* Loading */}
+          {loading && (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+              <Loader2 size={24} className="spin" />
+            </div>
+          )}
+
           {/* No query — show trending */}
-          {!hasQuery && (
-            <div className={styles.section}>
-              <div className={styles.sectionTitle}>
+          {!hasQuery && !loading && (
+            <div className="pesquisar-section">
+              <div className="pesquisar-section-title">
                 <TrendingUp size={16} />
                 Em destaque agora
               </div>
-              <div className={styles.tagGrid}>
-                {POPULAR_TAGS.map(t => (
-                  <button key={t.tag} className={styles.tagCard} onClick={() => setQuery(t.tag)}>
+              <div className="pesquisar-tag-grid">
+                {trending.map(t => (
+                  <button key={t.id} className="pesquisar-tag-card" onClick={() => setQuery(t.tag)}>
                     <Hash size={14} />
-                    <span className={styles.tagName}>{t.tag}</span>
-                    <span className={styles.tagCount}>{t.count} posts</span>
+                    <span className="pesquisar-tag-name">{t.tag}</span>
+                    <span className="pesquisar-tag-count">{t.post_count.toLocaleString('pt')} posts</span>
                   </button>
                 ))}
               </div>
@@ -110,24 +117,26 @@ export default function PesquisarPage() {
           )}
 
           {/* Results with query */}
-          {hasQuery && (activeTab === 'Tudo' || activeTab === 'Membros') && (
-            <div className={styles.section}>
-              <div className={styles.sectionTitle}><User size={15} /> Membros</div>
-              {filteredUsers.length === 0
-                ? <p className={styles.empty}>Nenhum membro encontrado para "{query}"</p>
-                : filteredUsers.map(u => (
-                  <div key={u.name} className={styles.userResult}>
-                    <div className={styles.userAvatar} style={{ background: u.bg, color: u.color }}>{u.initials}</div>
-                    <div className={styles.userInfo}>
-                      <span className={styles.userName}>{u.name}</span>
-                      <span className={styles.userHandle}>{u.handle} · {u.followers} seguidores</span>
-                      <span className={styles.userBio}>{u.bio}</span>
+          {hasQuery && !loading && (activeTab === 'Tudo' || activeTab === 'Membros') && (
+            <div className="pesquisar-section">
+              <div className="pesquisar-section-title"><User size={15} /> Membros</div>
+              {results.users.length === 0
+                ? <p className="pesquisar-empty">Nenhum membro encontrado para &quot;{query}&quot;</p>
+                : results.users.map(u => (
+                  <div key={u.id} className="pesquisar-user-result">
+                    <div className="pesquisar-user-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
+                      {u.avatar_initials || u.display_name?.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="pesquisar-user-info">
+                      <span className="pesquisar-user-name">{u.display_name}</span>
+                      <span className="pesquisar-user-handle">@{u.username} · {fmt(u.followers_count || 0)} seguidores</span>
+                      {u.bio && <span className="pesquisar-user-bio">{u.bio}</span>}
                     </div>
                     <button
-                      className={`${styles.followBtn} ${followed.has(u.name) ? styles.followingBtn : ''}`}
-                      onClick={() => setFollowed(prev => { const n = new Set(prev); n.has(u.name) ? n.delete(u.name) : n.add(u.name); return n })}
+                      className={`pesquisar-follow-btn ${followed.has(u.username) ? 'pesquisar-following-btn' : ''}`}
+                      onClick={() => handleFollow(u.id, u.username)}
                     >
-                      {followed.has(u.name) ? 'A seguir' : 'Seguir'}
+                      {followed.has(u.username) ? 'A seguir' : 'Seguir'}
                     </button>
                   </div>
                 ))
@@ -135,17 +144,17 @@ export default function PesquisarPage() {
             </div>
           )}
 
-          {hasQuery && (activeTab === 'Tudo' || activeTab === 'Tags') && (
-            <div className={styles.section}>
-              <div className={styles.sectionTitle}><Hash size={15} /> Tags</div>
-              {filteredTags.length === 0
-                ? <p className={styles.empty}>Nenhuma tag encontrada para "{query}"</p>
+          {hasQuery && !loading && (activeTab === 'Tudo' || activeTab === 'Tags') && (
+            <div className="pesquisar-section">
+              <div className="pesquisar-section-title"><Hash size={15} /> Tags</div>
+              {results.tags.length === 0
+                ? <p className="pesquisar-empty">Nenhuma tag encontrada para &quot;{query}&quot;</p>
                 : (
-                  <div className={styles.tagGrid}>
-                    {filteredTags.map(t => (
-                      <button key={t.tag} className={styles.tagCard} onClick={() => setQuery(t.tag)}>
-                        <Hash size={14} /><span className={styles.tagName}>{t.tag}</span>
-                        <span className={styles.tagCount}>{t.count} posts</span>
+                  <div className="pesquisar-tag-grid">
+                    {results.tags.map(t => (
+                      <button key={t.id} className="pesquisar-tag-card" onClick={() => setQuery(t.tag)}>
+                        <Hash size={14} /><span className="pesquisar-tag-name">{t.tag}</span>
+                        <span className="pesquisar-tag-count">{t.post_count.toLocaleString('pt')} posts</span>
                       </button>
                     ))}
                   </div>
@@ -154,14 +163,38 @@ export default function PesquisarPage() {
             </div>
           )}
 
-          {hasQuery && (activeTab === 'Tudo' || activeTab === 'Publicacoes') && (
-            <div className={styles.section}>
-              <div className={styles.sectionTitle}><FileText size={15} /> Publicacoes</div>
-              {filteredPosts.length === 0
-                ? <p className={styles.empty}>Nenhuma publicacao encontrada para "{query}"</p>
+          {hasQuery && !loading && (activeTab === 'Tudo' || activeTab === 'Publicacoes') && (
+            <div className="pesquisar-section">
+              <div className="pesquisar-section-title"><FileText size={15} /> Publicacoes</div>
+              {results.posts.length === 0
+                ? <p className="pesquisar-empty">Nenhuma publicacao encontrada para &quot;{query}&quot;</p>
                 : (
-                  <div className={styles.postsList}>
-                    {filteredPosts.map(p => <PostCard key={p.id} post={p} />)}
+                  <div className="pesquisar-posts-list">
+                    {results.posts.map(p => (
+                      <div key={p.id} className="post-card">
+                        <div className="post-header">
+                          <div className="post-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
+                            {p.author.avatar_url
+                              ? <img src={p.author.avatar_url} alt={p.author.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                              : p.author.avatar_initials}
+                          </div>
+                          <div className="post-author-info">
+                            <div className="post-author-name">
+                              {p.author.display_name}
+                              {p.author.role === 'superuser' && <span className="post-badge-su">Super User</span>}
+                              {p.author.role === 'mod' && <span className="post-badge-mod">Moderador</span>}
+                            </div>
+                            <div className="post-meta">
+                              <span>@{p.author.username}</span>
+                              {p.category && <span>{p.category}</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="post-body">
+                          <p className="post-text">{p.content}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )
               }
@@ -170,12 +203,12 @@ export default function PesquisarPage() {
         </div>
 
         {/* Right panel */}
-        <aside className={styles.rightPanel}>
-          <p className={styles.panelTitle}>Tags populares</p>
-          {POPULAR_TAGS.slice(0, 8).map(t => (
-            <button key={t.tag} className={styles.tagPill} onClick={() => setQuery(t.tag)}>
+        <aside className="pesquisar-right-panel">
+          <p className="pesquisar-panel-title">Tags populares</p>
+          {trending.slice(0, 8).map(t => (
+            <button key={t.id} className="pesquisar-tag-pill" onClick={() => setQuery(t.tag)}>
               <Hash size={12} />{t.tag}
-              <span className={styles.tagPillCount}>{t.count}</span>
+              <span className="pesquisar-tag-pill-count">{t.post_count.toLocaleString('pt')}</span>
             </button>
           ))}
         </aside>

@@ -1,18 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Search, Bell, Sun, Moon, X, Menu } from 'lucide-react'
 import { useTheme } from '@/lib/theme-context'
 import { useSidebar } from '@/lib/sidebar-context'
+import { getNotifications, markAllAsRead } from '@/services/notifications'
+import type { Notification } from '@/types'
 import styles from './Topbar.module.css'
-
-const notifications = [
-  { id: 1, initials: 'RK', color: '#1a1030', textColor: '#e879f9', text: 'RyuKen gostou da tua publicacao sobre One Piece', time: 'Agora mesmo', unread: true },
-  { id: 2, initials: 'AK', color: '#0a2015', textColor: '#5cfcb4', text: 'AkiraFan comentou: "Concordo totalmente!"', time: '2 min', unread: true },
-  { id: 3, initials: 'YS', color: '#1a1000', textColor: '#fcb45c', text: 'YukiSenpai passou a seguir-te', time: '15 min', unread: true },
-  { id: 4, initials: 'NZ', color: '#0a0a2a', textColor: '#7c5cfc', text: 'NaruZuki partilhou a tua publicacao', time: '1h', unread: false },
-  { id: 5, initials: 'SH', color: '#1a0010', textColor: '#fc5c7d', text: 'SakuraHime gostou da tua foto de perfil', time: '3h', unread: false },
-]
 
 interface TopbarProps {
   title: string
@@ -23,6 +17,50 @@ export default function Topbar({ title }: TopbarProps) {
   const { toggle: toggleSidebar } = useSidebar()
   const [notifOpen, setNotifOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [hasUnread, setHasUnread] = useState(false)
+  // eslint-disable-next-line react-hooks/purity
+  const nowRef = useRef(Date.now())
+
+  useEffect(() => {
+    getNotifications()
+      .then(res => {
+        if (res.data) {
+          setNotifications(res.data)
+          setHasUnread(res.data.some(n => !n.is_read))
+        }
+      })
+      .catch(() => {}) // fail silently — user still sees UI
+  }, [])
+
+  const openNotifs = () => {
+    setNotifOpen(true)
+    if (hasUnread) {
+      markAllAsRead().then(() => {
+        setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
+        setHasUnread(false)
+      }).catch(() => {})
+    }
+  }
+
+  const typeLabel = (type: Notification['type'], actorName: string) => {
+    switch (type) {
+      case 'like':    return `${actorName} gostou da tua publicação`
+      case 'comment': return `${actorName} comentou a tua publicação`
+      case 'follow':  return `${actorName} passou a seguir-te`
+      case 'share':   return `${actorName} partilhou a tua publicação`
+    }
+  }
+
+  const timeAgo = (dateStr: string) => {
+    const diff = nowRef.current - new Date(dateStr).getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1)  return 'Agora mesmo'
+    if (mins < 60) return `${mins} min`
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24)  return `${hrs}h`
+    return `${Math.floor(hrs / 24)}d`
+  }
 
   return (
     <>
@@ -46,9 +84,9 @@ export default function Topbar({ title }: TopbarProps) {
           <Search size={16} />
         </button>
 
-        <button className={styles.iconBtn} onClick={() => setNotifOpen(true)} aria-label="Notificacoes">
+        <button className={styles.iconBtn} onClick={openNotifs} aria-label="Notificações">
           <Bell size={16} />
-          <span className={styles.notifDot} />
+          {hasUnread && <span className={styles.notifDot} />}
         </button>
 
         <button className={styles.themeBtn} onClick={toggleTheme} aria-label="Alternar tema">
@@ -59,31 +97,30 @@ export default function Topbar({ title }: TopbarProps) {
         </button>
       </header>
 
-      {/* Overlay */}
-      {notifOpen && (
-        <div className={styles.overlay} onClick={() => setNotifOpen(false)} />
-      )}
+      {notifOpen && <div className={styles.overlay} onClick={() => setNotifOpen(false)} />}
 
-      {/* Notification panel */}
       <div className={`${styles.notifPanel} ${notifOpen ? styles.notifOpen : ''}`}>
         <div className={styles.notifHeader}>
-          <span className={styles.notifTitle}>Notificacoes</span>
+          <span className={styles.notifTitle}>Notificações</span>
           <button className={styles.closeBtn} onClick={() => setNotifOpen(false)}>
             <X size={14} />
           </button>
         </div>
         <div className={styles.notifList}>
+          {notifications.length === 0 && (
+            <p className={styles.notifEmpty}>Sem notificações por enquanto.</p>
+          )}
           {notifications.map(n => (
-            <div key={n.id} className={`${styles.notifItem} ${n.unread ? styles.unread : ''}`}>
+            <div key={n.id} className={`${styles.notifItem} ${!n.is_read ? styles.unread : ''}`}>
               <div
                 className={styles.notifAvatar}
-                style={{ background: n.color, color: n.textColor }}
+                style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}
               >
-                {n.initials}
+                {n.actor.avatar_initials}
               </div>
               <div className={styles.notifContent}>
-                <p className={styles.notifText}>{n.text}</p>
-                <span className={styles.notifTime}>{n.time}</span>
+                <p className={styles.notifText}>{typeLabel(n.type, n.actor.display_name)}</p>
+                <span className={styles.notifTime}>{timeAgo(n.created_at)}</span>
               </div>
             </div>
           ))}

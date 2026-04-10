@@ -2,20 +2,22 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import {
   Home, Search, Heart, MessageCircle, TrendingUp,
   BookOpen, Calendar, Layers, Image, User, Settings,
   LogOut, Star, ShieldAlert, X
 } from 'lucide-react'
 import { useSidebar } from '@/lib/sidebar-context'
+import { logout } from '@/services/auth'
 import styles from './Sidebar.module.css'
 
 const navMain = [
-  { href: '/feed',      icon: Home,           label: 'Feed' },
-  { href: '/pesquisar', icon: Search,         label: 'Pesquisar' },
-  { href: '/seguindo',  icon: Heart,          label: 'Seguindo',  badge: '3' },
-  { href: '/mensagens', icon: MessageCircle,  label: 'Mensagens', badge: '5', badgeRed: true },
-  { href: '/explorar',  icon: TrendingUp,     label: 'Explorar' },
+  { href: '/feed',      icon: Home,          label: 'Feed' },
+  { href: '/pesquisar', icon: Search,        label: 'Pesquisar' },
+  { href: '/seguindo',  icon: Heart,         label: 'Seguindo',  badge: '3' },
+  { href: '/mensagens', icon: MessageCircle, label: 'Mensagens', badge: '5', badgeRed: true },
+  { href: '/explorar',  icon: TrendingUp,    label: 'Explorar' },
 ]
 
 const navEspecial = [
@@ -34,6 +36,14 @@ const navConta = [
 export default function Sidebar() {
   const pathname = usePathname()
   const { isOpen, close } = useSidebar()
+  const { data: session } = useSession()
+
+  const user = session?.user
+  const displayName = user?.name ?? 'Utilizador'
+  const initials = user?.avatar_initials || displayName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+  const username = user?.username ? `@${user.username}` : ''
+  const role = user?.role ?? 'member'
+  const isAdmin = role === 'superuser' || role === 'mod'
 
   return (
     <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`}>
@@ -86,31 +96,37 @@ export default function Sidebar() {
         ))}
 
         <p className={styles.navLabel}>Conta</p>
-        {navConta.map(({ href, icon: Icon, label }) => (
-          <Link
-            key={href}
-            href={href}
-            className={`${styles.navItem} ${pathname.startsWith(href) ? styles.active : ''}`}
-            onClick={close}
-          >
-            <Icon size={18} />
-            {label}
-          </Link>
-        ))}
-        <Link href="/login" className={`${styles.navItem} ${styles.navDanger}`} onClick={close}>
+        {navConta.map(({ href, icon: Icon, label, adminOnly }) => {
+          if (adminOnly && !isAdmin) return null
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={`${styles.navItem} ${pathname.startsWith(href) ? styles.active : ''}`}
+              onClick={close}
+            >
+              <Icon size={18} />
+              {label}
+            </Link>
+          )
+        })}
+        <button
+          className={`${styles.navItem} ${styles.navDanger}`}
+          onClick={() => { close(); logout() }}
+        >
           <LogOut size={18} />
           Sair
-        </Link>
+        </button>
       </nav>
 
       <div className={styles.footer}>
         <Link href="/perfil" className={styles.userCard} onClick={close}>
-          <div className={styles.avatar}>JA</div>
+          <div className={styles.avatar}>{initials}</div>
           <div className={styles.userInfo}>
-            <span className={styles.userName}>Jerry Otaku</span>
-            <span className={styles.userRole}>@jalafo · Super User</span>
+            <span className={styles.userName}>{displayName}</span>
+            <span className={styles.userRole}>{username}{role === 'superuser' ? ' · Super User' : role === 'mod' ? ' · Mod' : ''}</span>
           </div>
-          <Star size={14} color="var(--text3)" />
+          {role === 'superuser' && <Star size={14} color="var(--text3)" />}
         </Link>
       </div>
     </aside>

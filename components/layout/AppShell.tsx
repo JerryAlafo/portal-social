@@ -1,5 +1,6 @@
 'use client'
 
+import { SessionProvider } from 'next-auth/react'
 import { ThemeProvider } from '@/lib/theme-context'
 import { SidebarProvider, useSidebar } from '@/lib/sidebar-context'
 import Sidebar from './Sidebar'
@@ -18,10 +19,12 @@ function ShellInner({ children }: { children: React.ReactNode }) {
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider>
-      <SidebarProvider>
-        <ShellInner>{children}</ShellInner>
-      </SidebarProvider>
-    </ThemeProvider>
+    <SessionProvider>
+      <ThemeProvider>
+        <SidebarProvider>
+          <ShellInner>{children}</ShellInner>
+        </SidebarProvider>
+      </ThemeProvider>
+    </SessionProvider>
   )
 }

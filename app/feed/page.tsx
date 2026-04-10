@@ -1,146 +1,308 @@
 'use client'
 
-import { useState } from 'react'
-import { Image, Film, FileText, Send } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useSession } from 'next-auth/react'
+import { Image as ImageIcon, Film, FileText, Send, Loader, X, Heart, MessageCircle, Share2 } from 'lucide-react'
 import Topbar from '@/components/layout/Topbar'
-import PostCard from '@/components/posts/PostCard'
-import { mockPosts, mockTrending, mockSuggestions, mockEvents } from '@/lib/mock-data'
-import styles from './page.module.css'
+import { getFeed, createPost, deletePost, toggleLike } from '@/services/posts'
+import { getTrending } from '@/services/trending'
+import { getSuggestions } from '@/services/suggestions'
+import { getEvents } from '@/services/events'
+import { followUser } from '@/services/following'
+import { uploadImage } from '@/services/upload'
+import type { Post, TrendingTag, Profile, Event } from '@/types'
 
 const CATEGORIES = ['Tudo', 'Shonen', 'Shojo', 'Isekai', 'Seinen', 'Cosplay', 'Manga', 'Figura', 'AMV']
 const TABS = ['Geral', 'A seguir', 'Noticias', 'Anuncios']
 
-export default function FeedPage() {
-  const [activeCategory, setActiveCategory] = useState('Tudo')
-  const [activeTab, setActiveTab] = useState('Geral')
-  const [posts, setPosts] = useState(mockPosts)
-  const [followed, setFollowed] = useState<Set<string>>(new Set())
+function fmt(n: number) {
+  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n)
+}
 
-  const handleDelete = (id: string) => {
+export default function FeedPage() {
+  const { data: session } = useSession()
+
+  const [activeCategory, setActiveCategory] = useState('Tudo')
+  const [activeTab,      setActiveTab]      = useState('Geral')
+  const [posts,          setPosts]          = useState<Post[]>([])
+  const [loading,        setLoading]        = useState(true)
+  const [composeText,    setComposeText]    = useState('')
+  const [publishing,     setPublishing]     = useState(false)
+  const [imageUrl,       setImageUrl]       = useState<string | null>(null)
+  const [imagePreview,   setImagePreview]   = useState<string | null>(null)
+  const [uploadingImg, setUploadingImg]  = useState(false)
+  const [followed,       setFollowed]       = useState<Set<string>>(new Set())
+
+  const [trending,     setTrending]     = useState<TrendingTag[]>([])
+  const [suggestions,  setSuggestions]  = useState<Profile[]>([])
+  const [events,       setEvents]       = useState<Event[]>([])
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const loadFeed = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await getFeed(1, 20, activeCategory)
+      if (res.data) setPosts(res.data)
+    } catch { /* keep previous */ }
+    finally { setLoading(false) }
+  }, [activeCategory])
+
+  useEffect(() => { loadFeed() }, [loadFeed])
+
+  useEffect(() => {
+    Promise.all([
+      getTrending(),
+      getSuggestions(),
+      getEvents(),
+    ]).then(([tr, sg, ev]) => {
+      if (tr.data) setTrending(tr.data)
+      if (sg.data) setSuggestions(sg.data.slice(0, 4))
+      if (ev.data) setEvents(ev.data.slice(0, 2))
+    }).catch(() => {})
+  }, [])
+
+  const handleDelete = async (id: string) => {
+    await deletePost(id)
     setPosts(prev => prev.filter(p => p.id !== id))
   }
 
-  const handleFollow = (name: string) => {
-    setFollowed(prev => {
-      const next = new Set(prev)
-      next.has(name) ? next.delete(name) : next.add(name)
-      return next
-    })
+  const handleLike = async (id: string) => {
+    const post = posts.find(p => p.id === id)
+    if (!post) return
+    setPosts(prev => prev.map(p =>
+      p.id === id
+        ? { ...p, liked_by_me: !p.liked_by_me, likes_count: p.liked_by_me ? p.likes_count - 1 : p.likes_count + 1 }
+        : p
+    ))
+    try { await toggleLike(id) } catch {
+      setPosts(prev => prev.map(p =>
+        p.id === id
+          ? { ...p, liked_by_me: !p.liked_by_me, likes_count: p.liked_by_me ? p.likes_count - 1 : p.likes_count + 1 }
+          : p
+      ))
+    }
   }
 
+  const handlePublish = async () => {
+    if (!composeText.trim() || publishing) return
+    setPublishing(true)
+    try {
+      const res = await createPost({
+        content: composeText.trim(),
+        category: activeCategory !== ' Tudo' ? activeCategory : undefined,
+        image_url: imageUrl ?? undefined,
+      })
+      if (res.data) {
+        setPosts(prev => [res.data!, ...prev])
+        setComposeText('')
+        setImageUrl(null)
+        setImagePreview(null)
+      }
+    } catch { /* ignore */ }
+    finally { setPublishing(false) }
+  }
+
+  const handleImagePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImagePreview(URL.createObjectURL(file))
+    setUploadingImg(true)
+    try {
+      const url = await uploadImage(file, 'posts')
+      setImageUrl(url)
+    } catch { setImagePreview(null) }
+    finally { setUploadingImg(false) }
+    e.target.value = ''
+  }
+
+  const handleFollow = async (userId: string, username: string) => {
+    setFollowed(prev => {
+      const next = new Set(prev)
+      next.has(username) ? next.delete(username) : next.add(username)
+      return next
+    })
+    try { await followUser(userId) } catch { /* ignore */ }
+  }
+
+  const initials   = session?.user?.avatar_initials || session?.user?.name?.slice(0, 2).toUpperCase() || '??'
+  const firstName  = session?.user?.name?.split(' ')[0] || 'utilizador'
+
   return (
-    <div className={styles.page}>
+    <div className="feed-page">
       <Topbar title="Feed" />
 
-      <div className={styles.body}>
-        {/* FEED COLUMN */}
-        <div className={styles.feedCol}>
+      <div className="feed-body">
+        <div className="feed-col">
 
-          {/* Compose box */}
-          <div className={styles.compose}>
-            <div className={styles.composeTop}>
-              <div className={styles.composeAvatar}>JA</div>
-              <div className={styles.composeInput}>O que esta a pensar, Jerry?</div>
+          <div className="feed-compose">
+            <div className="feed-compose-top">
+              <div className="feed-compose-avatar">{initials}</div>
+              <div
+                className="feed-compose-input"
+                contentEditable
+                suppressContentEditableWarning
+                onInput={e => setComposeText((e.target as HTMLDivElement).textContent ?? '')}
+                data-placeholder={`O que estas a pensar, ${firstName}?`}
+              />
             </div>
-            <div className={styles.composeActions}>
-              <button className={styles.composeBtn}><Image size={15} />Imagem</button>
-              <button className={styles.composeBtn}><Film size={15} />Video</button>
-              <button className={styles.composeBtn}><FileText size={15} />Artigo</button>
-              <button className={styles.submitBtn}><Send size={14} />Publicar</button>
+
+            {imagePreview && (
+              <div className="feed-image-preview-wrap">
+                <img src={imagePreview} alt="Preview" className="feed-image-preview" />
+                {uploadingImg && (
+                  <div className="feed-image-preview-overlay">
+                    <Loader size={20} className="spin" />
+                  </div>
+                )}
+                <button className="feed-image-remove-btn" onClick={() => { setImageUrl(null); setImagePreview(null) }}>
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+
+            <div className="feed-compose-actions">
+              <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" style={{ display: 'none' }} onChange={handleImagePick} />
+              <button className="feed-compose-btn" onClick={() => fileInputRef.current?.click()}>
+                <ImageIcon size={15} /> Imagem
+              </button>
+              <button className="feed-compose-btn"><Film size={15} /> Video</button>
+              <button className="feed-compose-btn"><FileText size={15} /> Artigo</button>
+              <button className="feed-submit-btn" onClick={handlePublish} disabled={publishing || !composeText.trim() || uploadingImg}>
+                {publishing ? <Loader size={14} className="spin" /> : <Send size={14} />}
+                Publicar
+              </button>
             </div>
           </div>
 
-          {/* Categories */}
-          <div className={styles.chips}>
+          <div className="feed-chips">
             {CATEGORIES.map(c => (
-              <button
-                key={c}
-                className={`${styles.chip} ${activeCategory === c ? styles.chipActive : ''}`}
-                onClick={() => setActiveCategory(c)}
-              >
+              <button key={c} className={`feed-chip ${activeCategory === c ? 'feed-chip-active' : ''}`} onClick={() => setActiveCategory(c)}>
                 {c}
               </button>
             ))}
           </div>
 
-          {/* Tabs */}
-          <div className={styles.tabs}>
+          <div className="feed-tabs">
             {TABS.map(t => (
-              <button
-                key={t}
-                className={`${styles.tab} ${activeTab === t ? styles.tabActive : ''}`}
-                onClick={() => setActiveTab(t)}
-              >
+              <button key={t} className={`feed-tab ${activeTab === t ? 'feed-tab-active' : ''}`} onClick={() => setActiveTab(t)}>
                 {t}
               </button>
             ))}
           </div>
 
-          {/* Posts */}
-          <div className={styles.posts}>
-            {posts.map((post, i) => (
-              <div
-                key={post.id}
-                className={`animate-fade-in-up animate-delay-${Math.min(i + 1, 4)}`}
-              >
-                <PostCard post={post} onDelete={handleDelete} />
-              </div>
-            ))}
-          </div>
+          {loading ? (
+            <div className="feed-loading-state"><Loader size={24} className="spin" /></div>
+          ) : posts.length === 0 ? (
+            <p className="feed-empty-state">Nenhuma publicacao por aqui ainda.</p>
+          ) : (
+            <div className="feed-posts">
+              {posts.map((post, i) => (
+                <div key={post.id} className={`animate-fade-in-up animate-delay-${Math.min(i + 1, 4)}`}>
+                  <div className="post-card">
+                    <div className="post-header">
+                      <div className="post-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
+                        {post.author.avatar_url
+                          ? <img src={post.author.avatar_url} alt={post.author.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                          : post.author.avatar_initials}
+                      </div>
+                      <div className="post-author-info">
+                        <div className="post-author-name">
+                          {post.author.display_name}
+                          {post.author.role === 'superuser' && <span className="post-badge-su">Super User</span>}
+                          {post.author.role === 'mod' && <span className="post-badge-mod">Moderador</span>}
+                        </div>
+                        <div className="post-meta">
+                          <span>@{post.author.username}</span>
+                          {post.category && <span>{post.category}</span>}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="post-body">
+                      <p className="post-text">{post.content}</p>
+                    </div>
+                    <div className="post-actions">
+                      <button className={`post-action-btn ${post.liked_by_me ? 'liked' : ''}`} onClick={() => handleLike(post.id)}>
+                        <Heart size={15} fill={post.liked_by_me ? 'currentColor' : 'none'} />
+                        <span>{fmt(post.likes_count)}</span>
+                      </button>
+                      <button className="post-action-btn">
+                        <MessageCircle size={15} />
+                        <span>{fmt(post.comments_count)}</span>
+                      </button>
+                      <button className="post-action-btn">
+                        <Share2 size={15} />
+                        <span>{fmt(post.shares_count)}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* RIGHT PANEL */}
-        <aside className={styles.rightPanel}>
-
-          <div className={styles.panelSection}>
-            <p className={styles.panelTitle}>Em destaque</p>
-            {mockTrending.map(t => (
-              <div key={t.rank} className={styles.trendingItem}>
-                <span className={styles.trendingRank}>{t.rank}</span>
-                <div>
-                  <div className={styles.trendingTag}>#{t.tag}</div>
-                  <div className={styles.trendingCount}>{t.count}</div>
+        <aside className="feed-right-panel">
+          <div className="feed-panel-section">
+            <p className="feed-panel-title">Em destaque</p>
+            {trending.length > 0
+              ? trending.map((t, i) => (
+                <div key={t.id} className="feed-trending-item">
+                  <span className="feed-trending-rank">{i + 1}</span>
+                  <div>
+                    <div className="feed-trending-tag">#{t.tag}</div>
+                    <div className="feed-trending-count">{t.post_count.toLocaleString('pt')} posts</div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+              : [1,2,3,4,5].map(i => (
+                <div key={i} className="feed-trending-item">
+                  <span className="feed-trending-rank">{i}</span>
+                  <div className="feed-skeleton-line" style={{ width: `${70 + i * 5}%` }} />
+                </div>
+              ))
+            }
           </div>
 
-          <div className={styles.panelSection}>
-            <p className={styles.panelTitle}>Sugestoes</p>
-            {mockSuggestions.map(u => (
-              <div key={u.name} className={styles.suggUser}>
-                <div
-                  className={styles.suggAvatar}
-                  style={{ background: u.bg, color: u.color }}
-                >
-                  {u.initials}
+          <div className="feed-panel-section">
+            <p className="feed-panel-title">Sugestoes</p>
+            {suggestions.length > 0
+              ? suggestions.map(u => (
+                <div key={u.id} className="feed-sugg-user">
+                  <div className="feed-sugg-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
+                    {u.avatar_initials}
+                  </div>
+                  <div className="feed-sugg-info">
+                    <div className="feed-sugg-name">{u.display_name}</div>
+                    <div className="feed-sugg-handle">@{u.username} · {fmt(u.followers_count || 0)} seguidores</div>
+                  </div>
+                  <button className={`feed-follow-btn ${followed.has(u.username) ? 'feed-following-btn-feed' : ''}`} onClick={() => handleFollow(u.id, u.username)}>
+                    {followed.has(u.username) ? 'A seguir' : 'Seguir'}
+                  </button>
                 </div>
-                <div className={styles.suggInfo}>
-                  <div className={styles.suggName}>{u.name}</div>
-                  <div className={styles.suggHandle}>{u.handle} · {u.followers}</div>
-                </div>
-                <button
-                  className={`${styles.followBtn} ${followed.has(u.name) ? styles.followingBtn : ''}`}
-                  onClick={() => handleFollow(u.name)}
-                >
-                  {followed.has(u.name) ? 'A seguir' : 'Seguir'}
-                </button>
-              </div>
-            ))}
+              ))
+              : null
+            }
           </div>
 
-          <div className={styles.panelSection}>
-            <p className={styles.panelTitle}>Proximos eventos</p>
-            {mockEvents.map(ev => (
-              <div key={ev.title} className={styles.eventCard}>
-                <div className={styles.eventDate} style={{ color: ev.dateColor }}>{ev.date}</div>
-                <div className={styles.eventTitle}>{ev.title}</div>
-                <div className={styles.eventCount}>{ev.interested}</div>
-              </div>
-            ))}
-          </div>
+          {events.length > 0 && (
+            <div className="feed-panel-section">
+              <p className="feed-panel-title">Proximos eventos</p>
+              {events.map(ev => {
+                const d = new Date(ev.date)
+                const label = d.toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase()
+                return (
+                  <div key={ev.id} className="feed-event-card">
+                    <div className="feed-event-date" style={{ color: ev.date_color ?? 'var(--accent2)' }}>{label}</div>
+                    <div className="feed-event-title">{ev.title}</div>
+                    <div className="feed-event-count">{ev.interested_count.toLocaleString('pt')} interessados</div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
 
-          <p className={styles.panelFooter}>
+          <p className="feed-panel-footer">
             Termos · Privacidade · Sobre · Ajuda<br />
             <span>PORTAL Beta © 2026 · Tablu Tech</span>
           </p>
