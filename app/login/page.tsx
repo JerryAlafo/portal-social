@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { ThemeProvider } from '@/lib/theme-context'
+import PasswordInput from '@/components/ui/PasswordInput'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -188,12 +189,9 @@ export default function LoginPage() {
 
             <div className="login-field">
               <label className="login-label">Password</label>
-              <input
-                className="login-input"
-                type="password"
+              <PasswordInput
                 value={values.password}
-                onChange={(event) => handleChange('password', event.target.value)}
-                placeholder="••••••••"
+                onChange={(v) => handleChange('password', v)}
                 required
               />
             </div>
@@ -201,12 +199,9 @@ export default function LoginPage() {
             {mode === 'register' && (
               <div className="login-field">
                 <label className="login-label">Confirmar password</label>
-                <input
-                  className="login-input"
-                  type="password"
+                <PasswordInput
                   value={values.confirmPassword}
-                  onChange={(event) => handleChange('confirmPassword', event.target.value)}
-                  placeholder="••••••••"
+                  onChange={(v) => handleChange('confirmPassword', v)}
                   required
                 />
               </div>

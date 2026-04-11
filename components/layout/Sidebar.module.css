@@ -92,6 +92,10 @@
   position: relative;
   text-decoration: none;
   margin-bottom: 2px;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
 }
 
 .navItem:hover {

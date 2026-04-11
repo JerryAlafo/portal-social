@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { User, Bell, Shield, Palette, Eye, Trash2, Save, ChevronRight, Loader2 } from 'lucide-react'
+import PasswordInput from '@/components/ui/PasswordInput'
 import Topbar from '@/components/layout/Topbar'
 import { getMyProfile, updateProfile } from '@/services/profile'
 import { uploadImage } from '@/services/upload'
@@ -41,6 +42,10 @@ export default function ConfigPage() {
   })
   const [appearance, setAppearance] = useState({
     theme: 'dark', fontSize: 'medium', compactMode: false, animations: true,
+  })
+  const [security, setSecurity] = useState({
+    currentPassword: '',
+    newPassword: '',
   })
 
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
@@ -370,11 +375,19 @@ export default function ConfigPage() {
               <div className={styles.fieldRow}>
                 <div className={styles.field}>
                   <label className={styles.label}>Password actual</label>
-                  <input className={styles.input} type="password" placeholder="••••••••" />
+                  <PasswordInput
+                    value={security.currentPassword}
+                    onChange={(v) => setSecurity(s => ({ ...s, currentPassword: v }))}
+                    inputClassName={styles.input}
+                  />
                 </div>
                 <div className={styles.field}>
                   <label className={styles.label}>Nova password</label>
-                  <input className={styles.input} type="password" placeholder="••••••••" />
+                  <PasswordInput
+                    value={security.newPassword}
+                    onChange={(v) => setSecurity(s => ({ ...s, newPassword: v }))}
+                    inputClassName={styles.input}
+                  />
                 </div>
               </div>
               <div className={styles.dangerZone}>
