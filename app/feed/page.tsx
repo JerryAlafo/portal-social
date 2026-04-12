@@ -43,11 +43,25 @@ export default function FeedPage() {
   const loadFeed = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await getFeed(1, 20, activeCategory)
+      let filter: string | undefined
+      let category: string | undefined
+      
+      if (activeTab === 'A seguir') {
+        filter = 'following'
+      } else if (activeTab === 'Noticias') {
+        category = 'Noticias'
+      } else if (activeTab === 'Anuncios') {
+        category = 'Anuncios'
+      } else {
+        // Geral - use category filter
+        category = activeCategory !== 'Tudo' ? activeCategory : undefined
+      }
+      
+      const res = await getFeed(1, 20, category, filter)
       if (res.data) setPosts(res.data)
     } catch { /* keep previous */ }
     finally { setLoading(false) }
-  }, [activeCategory])
+  }, [activeCategory, activeTab])
 
   useEffect(() => { loadFeed() }, [loadFeed])
 

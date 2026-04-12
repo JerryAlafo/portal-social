@@ -248,9 +248,10 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
   const handleLoadReplies = async (commentId: string) => {
     setLoadingReplies(true)
     try {
-      const res = await getComments(post.id)
-      if (res.data) {
-        setReplies(prev => ({ ...prev, [commentId]: res.data!.filter(c => c.parent_id === commentId) }))
+      const res = await fetch(`/api/comments/${post.id}?include_replies=true`)
+      const json = await res.json()
+      if (json.data) {
+        setReplies(prev => ({ ...prev, [commentId]: json.data.filter((c: Comment) => c.parent_id === commentId) }))
       }
     } catch { /* ignore */ }
     finally { setLoadingReplies(false) }

@@ -5,14 +5,22 @@ import { createServerClient } from '@/lib/supabase-server'
 export async function GET(_req: Request, props: { params: Promise<{ postId: string }> }) {
   try {
     const { postId } = await props.params
+    const { searchParams } = new URL(_req.url)
+    const includeReplies = searchParams.get('include_replies') === 'true'
     const supabase = createServerClient()
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('comments')
       .select('*, author:profiles(id, username, display_name, avatar_initials, avatar_url)')
       .eq('post_id', postId)
-      .is('parent_id', null)
-      .order('created_at', { ascending: true })
+
+    if (!includeReplies) {
+      query = query.is('parent_id', null)
+    }
+    
+    query = query.order('created_at', { ascending: true })
+
+    const { data, error } = await query
 
     if (error) throw error
     return NextResponse.json({ data: data ?? [], error: null })

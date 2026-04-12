@@ -29,10 +29,15 @@ function MensagensContent() {
 
   // Load conversations
   useEffect(() => {
-    getConversations()
-      .then(res => { if (res.data) setConversations(res.data) })
-      .catch(() => {})
-      .finally(() => setLoadingConvs(false))
+    const loadConversations = () => {
+      getConversations()
+        .then(res => { if (res.data) setConversations(res.data) })
+        .catch(() => {})
+        .finally(() => setLoadingConvs(false))
+    }
+    loadConversations()
+    const interval = setInterval(loadConversations, 10000)
+    return () => clearInterval(interval)
   }, [])
 
   // Handle user param for opening conversation
@@ -75,6 +80,14 @@ function MensagensContent() {
     try {
       const res = await getMessages(conv.id)
       if (res.data) setMessages(res.data)
+      
+      // Mark messages as read via API
+      await fetch(`/api/conversations/${conv.id}/messages/read`, { method: 'POST' })
+      
+      // Mark as read locally
+      setConversations(prev =>
+        prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c)
+      )
     } catch {
       setMessages([])
     } finally {
@@ -86,13 +99,24 @@ function MensagensContent() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Mark messages as read when conversation is open
+  useEffect(() => {
+    if (activeConv && chatOpen) {
+      const timer = setTimeout(async () => {
+        try {
+          await fetch(`/api/conversations/${activeConv.id}/messages/read`, { method: 'POST' })
+          setConversations(prev =>
+            prev.map(c => c.id === activeConv.id ? { ...c, unread_count: 0 } : c)
+          )
+        } catch { /* ignore */ }
+      }, 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [activeConv, chatOpen])
+
   const selectConvo = async (conv: Conversation) => {
     setActiveConv(conv)
     setChatOpen(true)
-    // Mark as read locally
-    setConversations(prev =>
-      prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c)
-    )
     await loadMessages(conv)
   }
 
@@ -156,6 +180,8 @@ function MensagensContent() {
     c.other_user.username.toLowerCase().includes(search.toLowerCase())
   )
 
+  const totalUnread = conversations.reduce((sum, c) => sum + c.unread_count, 0)
+
   const myId = session?.user?.id
 
   return (
@@ -174,6 +200,12 @@ function MensagensContent() {
               onChange={e => setSearch(e.target.value)}
             />
           </div>
+
+          {totalUnread > 0 && (
+            <div className={styles.unreadHeader}>
+              <span>{totalUnread} mensagem{totalUnread > 1 ? 'ns' : ''} não lida{totalUnread > 1 ? 's' : ''}</span>
+            </div>
+          )}
 
           <div className={styles.convList}>
             {loadingConvs ? (

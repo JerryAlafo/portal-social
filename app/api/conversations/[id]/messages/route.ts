@@ -28,12 +28,8 @@ export async function GET(request: Request, props: { params: Promise<{ id: strin
 
     if (error) throw error
 
-    // Mark messages as read
-    await supabase
-      .from('messages')
-      .update({ is_read: true })
-      .eq('conversation_id', conversation_id)
-      .neq('sender_id', session.user.id)
+    // Note: Messages should be marked as read when the user actually views them
+    // This is handled client-side when the chat is open for a certain time
 
     return NextResponse.json({ data: messages, error: null })
   } catch {

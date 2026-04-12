@@ -10,11 +10,24 @@ export async function GET() {
     const supabase = createServerClient()
     const userId = session.user.id
 
-    const { count: unreadMessages } = await supabase
-      .from('messages')
-      .select('*', { count: 'exact', head: true })
-      .eq('receiver_id', userId)
-      .eq('is_read', false)
+    // Get unread messages count using conversations
+    const { data: userConvs } = await supabase
+      .from('conversation_participants')
+      .select('conversation_id')
+      .eq('user_id', userId)
+
+    const convIds = userConvs?.map(c => c.conversation_id) ?? []
+
+    let unreadMessages = 0
+    if (convIds.length > 0) {
+      const { count } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .in('conversation_id', convIds)
+        .neq('sender_id', userId)
+        .eq('is_read', false)
+      unreadMessages = count ?? 0
+    }
 
     const { count: unreadNotifications } = await supabase
       .from('notifications')
@@ -29,7 +42,7 @@ export async function GET() {
 
     return NextResponse.json({
       data: {
-        unreadMessages: unreadMessages ?? 0,
+        unreadMessages: unreadMessages,
         unreadNotifications: unreadNotifications ?? 0,
         followingCount: followingCount ?? 0,
       },
