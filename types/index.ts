@@ -37,8 +37,12 @@ export interface Comment {
   id: string
   post_id: string
   author_id: string
+  parent_id: string | null
   content: string
+  likes_count: number
+  liked_by_me?: boolean
   created_at: string
+  updated_at?: string
   author: Pick<Profile, 'id' | 'username' | 'display_name' | 'avatar_initials' | 'avatar_url'>
 }
 

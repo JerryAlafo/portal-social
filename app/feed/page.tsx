@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
-import { Image as ImageIcon, Film, FileText, Send, Loader, X, Heart, MessageCircle, Share2 } from 'lucide-react'
+import { Image as ImageIcon, Film, FileText, Send, Loader, X } from 'lucide-react'
 import Topbar from '@/components/layout/Topbar'
+import PostCard from '@/components/posts/PostCard'
 import { getFeed, createPost, deletePost, toggleLike } from '@/services/posts'
 import { getTrending } from '@/services/trending'
 import { getSuggestions } from '@/services/suggestions'
@@ -199,43 +200,11 @@ export default function FeedPage() {
             <div className="feed-posts">
               {posts.map((post, i) => (
                 <div key={post.id} className={`animate-fade-in-up animate-delay-${Math.min(i + 1, 4)}`}>
-                  <div className="post-card">
-                    <div className="post-header">
-                      <div className="post-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
-                        {post.author.avatar_url
-                          ? <img src={post.author.avatar_url} alt={post.author.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-                          : post.author.avatar_initials}
-                      </div>
-                      <div className="post-author-info">
-                        <div className="post-author-name">
-                          {post.author.display_name}
-                          {post.author.role === 'superuser' && <span className="post-badge-su">Super User</span>}
-                          {post.author.role === 'mod' && <span className="post-badge-mod">Moderador</span>}
-                        </div>
-                        <div className="post-meta">
-                          <span>@{post.author.username}</span>
-                          {post.category && <span>{post.category}</span>}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="post-body">
-                      <p className="post-text">{post.content}</p>
-                    </div>
-                    <div className="post-actions">
-                      <button className={`post-action-btn ${post.liked_by_me ? 'liked' : ''}`} onClick={() => handleLike(post.id)}>
-                        <Heart size={15} fill={post.liked_by_me ? 'currentColor' : 'none'} />
-                        <span>{fmt(post.likes_count)}</span>
-                      </button>
-                      <button className="post-action-btn">
-                        <MessageCircle size={15} />
-                        <span>{fmt(post.comments_count)}</span>
-                      </button>
-                      <button className="post-action-btn">
-                        <Share2 size={15} />
-                        <span>{fmt(post.shares_count)}</span>
-                      </button>
-                    </div>
-                  </div>
+                  <PostCard
+                    post={post}
+                    onDelete={session?.user?.id === post.author_id || (session?.user as any)?.role === 'mod' || (session?.user as any)?.role === 'superuser' ? handleDelete : undefined}
+                    onLike={handleLike}
+                  />
                 </div>
               ))}
             </div>

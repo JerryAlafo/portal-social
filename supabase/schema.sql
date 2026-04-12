@@ -72,6 +72,7 @@ create table if not exists comments (
   id         uuid        primary key default gen_random_uuid(),
   post_id    uuid        not null references posts(id) on delete cascade,
   author_id  uuid        not null references profiles(id) on delete cascade,
+  parent_id  uuid        references comments(id) on delete cascade,
   content    text        not null,
   created_at timestamptz not null default now()
 );
@@ -234,6 +235,7 @@ create index if not exists idx_post_likes_post_id on post_likes(post_id);
 
 -- Comments
 create index if not exists idx_comments_post_id on comments(post_id);
+create index if not exists idx_comments_parent_id on comments(parent_id) where parent_id is not null;
 
 -- Follows
 create index if not exists idx_follows_follower_id  on follows(follower_id);
@@ -546,6 +548,7 @@ create policy "post_likes_delete" on post_likes
 -- ----------------------------------------------------------
 drop policy if exists "comments_select" on comments;
 drop policy if exists "comments_insert" on comments;
+drop policy if exists "comments_update" on comments;
 drop policy if exists "comments_delete" on comments;
 
 create policy "comments_select" on comments
@@ -553,6 +556,9 @@ create policy "comments_select" on comments
 
 create policy "comments_insert" on comments
   for insert to authenticated with check (auth.uid() = author_id);
+
+create policy "comments_update" on comments
+  for update to authenticated using (auth.uid() = author_id);
 
 create policy "comments_delete" on comments
   for delete to authenticated using (auth.uid() = author_id);

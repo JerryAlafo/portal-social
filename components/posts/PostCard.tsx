@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { Heart, MessageCircle, Share2, MoreHorizontal, Send, Loader2, Check, Copy, Trash2 } from 'lucide-react'
+import { Heart, MessageCircle, Share2, MoreHorizontal, Send, Loader2, Check, Copy, Trash2, Pencil, Reply, X } from 'lucide-react'
 import type { Post, Comment } from '@/types'
-import { getComments, addComment, deleteComment } from '@/services/comments'
+import { getComments, addComment, editComment, deleteComment, likeComment } from '@/services/comments'
 import styles from './PostCard.module.css'
 
 interface PostCardProps {
@@ -16,10 +16,10 @@ interface PostCardProps {
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime()
   const mins = Math.floor(diff / 60000)
-  if (mins < 1)  return 'Agora mesmo'
+  if (mins < 1) return 'Agora mesmo'
   if (mins < 60) return `${mins} min`
   const hrs = Math.floor(mins / 60)
-  if (hrs < 24)  return `${hrs}h`
+  if (hrs < 24) return `${hrs}h`
   return `${Math.floor(hrs / 24)}d`
 }
 
@@ -27,27 +27,142 @@ function fmt(n: number) {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n)
 }
 
+interface CommentItemProps {
+  comment: Comment
+  postId: string
+  myId: string
+  myRole: string
+  onDelete: (id: string) => void
+  onEdit: (id: string, content: string) => void
+  onLike: (id: string) => void
+  onReply: (parentId: string) => void
+  replies: Comment[]
+  loadingReplies: boolean
+  onLoadReplies: (commentId: string) => void
+  depth?: number
+}
+
+function CommentItem({ comment, postId, myId, myRole, onDelete, onEdit, onLike, onReply, replies, loadingReplies, onLoadReplies, depth = 0 }: CommentItemProps) {
+  const [editing, setEditing] = useState(false)
+  const [editText, setEditText] = useState(comment.content)
+  const [showReplies, setShowReplies] = useState(false)
+
+  const canEdit = comment.author_id === myId
+  const canDelete = comment.author_id === myId || myRole === 'mod' || myRole === 'superuser'
+
+  const handleSaveEdit = () => {
+    if (editText.trim() && editText !== comment.content) {
+      onEdit(comment.id, editText.trim())
+    }
+    setEditing(false)
+  }
+
+  const handleShareComment = async () => {
+    const url = `${window.location.origin}/feed?post=${postId}&comment=${comment.id}`
+    try {
+      await navigator.clipboard.writeText(url)
+    } catch { /* ignore */ }
+  }
+
+  return (
+    <div className={styles.commentItem} style={{ marginLeft: depth > 0 ? 24 : 0 }}>
+      <div className={styles.commentAvatar}>
+        {comment.author.avatar_url
+          ? <img src={comment.author.avatar_url} alt={comment.author.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+          : comment.author.avatar_initials}
+      </div>
+      <div className={styles.commentBubble}>
+        <div className={styles.commentMeta}>
+          <span className={styles.commentAuthor}>{comment.author.display_name}</span>
+          <span className={styles.commentHandle}>@{comment.author.username}</span>
+          <span className={styles.commentTime}>{timeAgo(comment.created_at)}</span>
+          {comment.updated_at && <span className={styles.commentEdited}>(editado)</span>}
+        </div>
+
+        {editing ? (
+          <div className={styles.editForm}>
+            <input
+              className={styles.editInput}
+              value={editText}
+              onChange={e => setEditText(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(); if (e.key === 'Escape') { setEditText(comment.content); setEditing(false) } }}
+              maxLength={500}
+              autoFocus
+            />
+            <div className={styles.editActions}>
+              <button className={styles.editSaveBtn} onClick={handleSaveEdit}>Guardar</button>
+              <button className={styles.editCancelBtn} onClick={() => { setEditText(comment.content); setEditing(false) }}><X size={12} /></button>
+            </div>
+          </div>
+        ) : (
+          <div className={styles.commentText}>{comment.content}</div>
+        )}
+
+        <div className={styles.commentActions}>
+          <button
+            className={`${styles.commentActionBtn} ${comment.liked_by_me ? styles.commentLiked : ''}`}
+            onClick={() => onLike(comment.id)}
+          >
+            <Heart size={11} fill={comment.liked_by_me ? 'currentColor' : 'none'} />
+            {comment.likes_count > 0 && <span>{comment.likes_count}</span>}
+          </button>
+
+          <button className={styles.commentActionBtn} onClick={() => onReply(comment.id)}>
+            <Reply size={11} />
+          </button>
+
+          <button className={styles.commentActionBtn} onClick={handleShareComment}>
+            <Share2 size={11} />
+          </button>
+
+          {canEdit && !editing && (
+            <button className={styles.commentActionBtn} onClick={() => setEditing(true)}>
+              <Pencil size={11} />
+            </button>
+          )}
+
+          {canDelete && (
+            <button
+              className={`${styles.commentActionBtn} ${styles.commentDeleteAction}`}
+              onClick={() => onDelete(comment.id)}
+            >
+              <Trash2 size={11} />
+            </button>
+          )}
+        </div>
+
+        {!depth && (
+          <button className={styles.repliesToggle} onClick={() => { setShowReplies(!showReplies); if (!showReplies) onLoadReplies(comment.id) }}>
+            {loadingReplies ? <Loader2 size={10} className="spin" /> : showReplies ? 'Ocultar respostas' : `Ver respostas`}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
   const { data: session } = useSession()
 
-  const [menuOpen,        setMenuOpen]        = useState(false)
-  const [commentsOpen,    setCommentsOpen]    = useState(false)
-  const [comments,        setComments]        = useState<Comment[]>([])
-  const [commentsLoaded,  setCommentsLoaded]  = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [commentsOpen, setCommentsOpen] = useState(false)
+  const [comments, setComments] = useState<Comment[]>([])
+  const [commentsLoaded, setCommentsLoaded] = useState(false)
   const [loadingComments, setLoadingComments] = useState(false)
-  const [commentText,     setCommentText]     = useState('')
-  const [submitting,      setSubmitting]      = useState(false)
-  const [copied,          setCopied]          = useState(false)
-  const [shareCount,      setShareCount]      = useState(post.shares_count)
+  const [commentText, setCommentText] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [shareCount, setShareCount] = useState(post.shares_count)
+  const [replyingTo, setReplyingTo] = useState<string | null>(null)
+  const [replies, setReplies] = useState<Record<string, Comment[]>>({})
+  const [loadingReplies, setLoadingReplies] = useState(false)
 
   const myInitials = session?.user?.avatar_initials
     || session?.user?.name?.slice(0, 2).toUpperCase()
     || '?'
 
-  const myId   = session?.user?.id ?? ''
+  const myId = session?.user?.id ?? ''
   const myRole = (session?.user as { role?: string })?.role ?? ''
-
-  // ── Comments ─────────────────────────────────────────────
 
   const handleToggleComments = async () => {
     const next = !commentsOpen
@@ -68,24 +183,85 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
     if (!commentText.trim() || submitting) return
     setSubmitting(true)
     try {
-      const res = await addComment(post.id, commentText.trim())
+      const res = await addComment(post.id, commentText.trim(), replyingTo ?? undefined)
       if (res.data) {
-        setComments(prev => [...prev, res.data!])
+        if (replyingTo) {
+          setReplies(prev => ({ ...prev, [replyingTo]: [...(prev[replyingTo] || []), res.data!] }))
+          setComments(prev => prev.map(c => c.id === replyingTo ? { ...c, likes_count: c.likes_count } : c))
+        } else {
+          setComments(prev => [...prev, res.data!])
+        }
         setCommentText('')
+        setReplyingTo(null)
       }
     } finally {
       setSubmitting(false)
     }
   }
 
-  const handleDeleteComment = async (commentId: string) => {
+  const handleEditComment = async (commentId: string, content: string) => {
     try {
-      await deleteComment(post.id, commentId)
-      setComments(prev => prev.filter(c => c.id !== commentId))
+      const res = await editComment(post.id, commentId, content)
+      if (res.data) {
+        if (replyingTo) {
+          setReplies(prev => ({
+            ...prev,
+            [replyingTo]: prev[replyingTo].map(c => c.id === commentId ? res.data! : c)
+          }))
+        } else {
+          setComments(prev => prev.map(c => c.id === commentId ? res.data! : c))
+        }
+      }
     } catch { /* ignore */ }
   }
 
-  // ── Share ────────────────────────────────────────────────
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      await deleteComment(post.id, commentId)
+      if (replyingTo) {
+        setReplies(prev => ({
+          ...prev,
+          [replyingTo]: prev[replyingTo].filter(c => c.id !== commentId)
+        }))
+      } else {
+        setComments(prev => prev.filter(c => c.id !== commentId))
+      }
+    } catch { /* ignore */ }
+  }
+
+  const handleLikeComment = async (commentId: string) => {
+    try {
+      const res = await likeComment(post.id, commentId)
+      if (res.data) {
+        const updateComment = (comments: Comment[]) =>
+          comments.map(c => c.id === commentId ? { ...c, liked_by_me: res.data!.liked, likes_count: res.data!.likes_count } : c)
+        if (replyingTo) {
+          setReplies(prev => ({ ...prev, [replyingTo]: updateComment(prev[replyingTo] || []) }))
+        } else {
+          setComments(updateComment)
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
+  const handleLoadReplies = async (commentId: string) => {
+    setLoadingReplies(true)
+    try {
+      const res = await getComments(post.id)
+      if (res.data) {
+        setReplies(prev => ({ ...prev, [commentId]: res.data!.filter(c => c.parent_id === commentId) }))
+      }
+    } catch { /* ignore */ }
+    finally { setLoadingReplies(false) }
+  }
+
+  const handleReply = (parentId: string) => {
+    setReplyingTo(parentId)
+    const parentComment = comments.find(c => c.id === parentId)
+    if (parentComment) {
+      setCommentText(`@${parentComment.author.username} `)
+    }
+  }
 
   const handleShare = async () => {
     setMenuOpen(false)
@@ -105,18 +281,18 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
       setTimeout(() => setCopied(false), 2500)
     }
 
-    // Increment counter (non-blocking)
     fetch(`/api/posts/${post.id}/share`, { method: 'POST' })
       .then(() => setShareCount(n => n + 1))
       .catch(() => { /* non-critical */ })
   }
+
+  const replyingToComment = replyingTo ? comments.find(c => c.id === replyingTo) : null
 
   const { author } = post
 
   return (
     <article className={styles.card}>
 
-      {/* ── Header ─────────────────────────────────────── */}
       <div className={styles.header}>
         <div className={styles.avatar} style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
           {author.avatar_url
@@ -128,7 +304,7 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
           <div className={styles.authorName}>
             {author.display_name}
             {author.role === 'superuser' && <span className={styles.badgeSU}>Super User</span>}
-            {author.role === 'mod'       && <span className={styles.badgeMod}>Moderador</span>}
+            {author.role === 'mod' && <span className={styles.badgeMod}>Moderador</span>}
           </div>
           <div className={styles.meta}>
             <span>@{author.username}</span>
@@ -164,7 +340,6 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
         </div>
       </div>
 
-      {/* ── Body ───────────────────────────────────────── */}
       <div className={styles.body}>
         <p className={styles.text}>{post.content}</p>
         {post.image_url && (
@@ -172,7 +347,6 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
         )}
       </div>
 
-      {/* ── Actions ────────────────────────────────────── */}
       <div className={styles.actions}>
         <button
           className={`${styles.actionBtn} ${post.liked_by_me ? styles.liked : ''}`}
@@ -198,71 +372,78 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
         </button>
       </div>
 
-      {/* ── Comments section ───────────────────────────── */}
       {commentsOpen && (
         <div className={styles.commentsSection}>
-
-          {/* Loading */}
           {loadingComments && (
             <div className={styles.commentsLoading}>
               <Loader2 size={16} className="spin" />
             </div>
           )}
 
-          {/* Empty */}
           {!loadingComments && comments.length === 0 && (
             <p className={styles.commentsEmpty}>Ainda não há comentários. Sê o primeiro!</p>
           )}
 
-          {/* Comment list */}
-          {comments.map(c => {
-            const canDelete = c.author_id === myId || myRole === 'mod' || myRole === 'superuser'
-            return (
-              <div key={c.id} className={styles.commentItem}>
-                <div className={styles.commentAvatar}>
-                  {c.author.avatar_url
-                    ? <img src={c.author.avatar_url} alt={c.author.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-                    : c.author.avatar_initials}
-                </div>
-                <div className={styles.commentBubble}>
-                  <div className={styles.commentMeta}>
-                    <span className={styles.commentAuthor}>{c.author.display_name}</span>
-                    <span className={styles.commentHandle}>@{c.author.username}</span>
-                    <span className={styles.commentTime}>{timeAgo(c.created_at)}</span>
-                    {canDelete && (
-                      <button
-                        className={styles.commentDeleteBtn}
-                        onClick={() => handleDeleteComment(c.id)}
-                        title="Apagar comentário"
-                      >
-                        <Trash2 size={11} />
-                      </button>
-                    )}
-                  </div>
-                  <div className={styles.commentText}>{c.content}</div>
-                </div>
-              </div>
-            )
-          })}
+          {comments.map(c => (
+            <div key={c.id}>
+              <CommentItem
+                comment={c}
+                postId={post.id}
+                myId={myId}
+                myRole={myRole}
+                onDelete={handleDeleteComment}
+                onEdit={handleEditComment}
+                onLike={handleLikeComment}
+                onReply={handleReply}
+                replies={replies[c.id] || []}
+                loadingReplies={loadingReplies}
+                onLoadReplies={handleLoadReplies}
+              />
+              {replies[c.id]?.map(r => (
+                <CommentItem
+                  key={r.id}
+                  comment={r}
+                  postId={post.id}
+                  myId={myId}
+                  myRole={myRole}
+                  onDelete={handleDeleteComment}
+                  onEdit={handleEditComment}
+                  onLike={handleLikeComment}
+                  onReply={handleReply}
+                  replies={[]}
+                  loadingReplies={false}
+                  onLoadReplies={() => {}}
+                  depth={1}
+                />
+              ))}
+            </div>
+          ))}
 
-          {/* Input */}
           <div className={styles.commentInputRow}>
             <div className={styles.commentAvatar}>
               {myInitials}
             </div>
-            <input
-              className={styles.commentField}
-              placeholder="Adicionar um comentário..."
-              value={commentText}
-              onChange={e => setCommentText(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  handleSubmitComment()
-                }
-              }}
-              maxLength={500}
-            />
+            <div className={styles.commentInputWrap}>
+              {replyingToComment && (
+                <div className={styles.replyingToBar}>
+                  <span>A responder a @{replyingToComment.author.username}</span>
+                  <button onClick={() => { setReplyingTo(null); setCommentText('') }}><X size={12} /></button>
+                </div>
+              )}
+              <input
+                className={styles.commentField}
+                placeholder={replyingTo ? `Responder a ${replyingToComment?.author.username}...` : 'Adicionar um comentário...'}
+                value={commentText}
+                onChange={e => setCommentText(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    handleSubmitComment()
+                  }
+                }}
+                maxLength={500}
+              />
+            </div>
             <button
               className={styles.commentSendBtn}
               onClick={handleSubmitComment}
@@ -271,10 +452,8 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
               {submitting ? <Loader2 size={14} className="spin" /> : <Send size={14} />}
             </button>
           </div>
-
         </div>
       )}
-
     </article>
   )
 }
