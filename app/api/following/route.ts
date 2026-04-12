@@ -37,6 +37,14 @@ export async function POST(request: Request) {
 
     await supabase.from('follows').upsert({ follower_id: session.user.id, following_id: user_id })
 
+    // Create notification for the followed user
+    await supabase.from('notifications').insert({
+      user_id: user_id,
+      actor_id: session.user.id,
+      type: 'follow',
+      reference_id: session.user.id,
+    })
+
     return NextResponse.json({ data: { following: true }, error: null })
   } catch {
     return NextResponse.json({ error: 'Erro ao seguir utilizador.' }, { status: 500 })

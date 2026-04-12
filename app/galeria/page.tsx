@@ -48,7 +48,9 @@ export default function GaleriaPage() {
     fetchGallery()
   }, [])
 
-  const filtered = activeCat === 'Tudo' ? items : items.filter(i => i.category === activeCat)
+  const filtered = activeCat === 'Tudo' ? items : items.filter(i => 
+    i.category?.toLowerCase().includes(activeCat.toLowerCase())
+  )
   const lightboxItem = items.find(i => i.id === lightbox)
 
   const toggleLike = (id: string) => {

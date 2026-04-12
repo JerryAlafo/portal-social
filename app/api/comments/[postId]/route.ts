@@ -43,6 +43,40 @@ export async function POST(request: Request, props: { params: Promise<{ postId: 
 
     if (error) throw error
 
+    // Create notification for post author (if not own comment)
+    const { data: post } = await supabase
+      .from('posts')
+      .select('author_id')
+      .eq('id', postId)
+      .single()
+
+    if (post && post.author_id !== session.user.id) {
+      await supabase.from('notifications').insert({
+        user_id: post.author_id,
+        actor_id: session.user.id,
+        type: 'comment',
+        reference_id: postId,
+      })
+    }
+
+    // If replying to a comment, notify that comment's author
+    if (parent_id) {
+      const { data: parentComment } = await supabase
+        .from('comments')
+        .select('author_id')
+        .eq('id', parent_id)
+        .single()
+
+      if (parentComment && parentComment.author_id !== session.user.id && parentComment.author_id !== post?.author_id) {
+        await supabase.from('notifications').insert({
+          user_id: parentComment.author_id,
+          actor_id: session.user.id,
+          type: 'comment',
+          reference_id: postId,
+        })
+      }
+    }
+
     return NextResponse.json({ data, error: null }, { status: 201 })
   } catch (err) {
     console.error('POST comment error:', err)

@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Search, Bell, Sun, Moon, X, Menu } from 'lucide-react'
 import { useTheme } from '@/lib/theme-context'
 import { useSidebar } from '@/lib/sidebar-context'
@@ -13,14 +15,24 @@ interface TopbarProps {
 }
 
 export default function Topbar({ title }: TopbarProps) {
+  const router = useRouter()
   const { theme, toggleTheme } = useTheme()
   const { toggle: toggleSidebar } = useSidebar()
   const [notifOpen, setNotifOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [hasUnread, setHasUnread] = useState(false)
-  // eslint-disable-next-line react-hooks/purity
   const nowRef = useRef(Date.now())
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (searchQuery.trim()) {
+      router.push(`/pesquisar?q=${encodeURIComponent(searchQuery.trim())}`)
+      setSearchOpen(false)
+      setSearchQuery('')
+    }
+  }
 
   useEffect(() => {
     getNotifications()
@@ -73,7 +85,15 @@ export default function Topbar({ title }: TopbarProps) {
 
         <div className={`${styles.searchBar} ${searchOpen ? styles.searchOpen : ''}`}>
           <Search size={14} color="var(--text3)" />
-          <input type="text" placeholder="Pesquisar no PORTAL..." />
+          <form onSubmit={handleSearch} style={{ display: 'contents' }}>
+            <input 
+              type="text" 
+              placeholder="Pesquisar no PORTAL..." 
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              autoFocus={searchOpen}
+            />
+          </form>
         </div>
 
         <button
@@ -112,14 +132,19 @@ export default function Topbar({ title }: TopbarProps) {
           )}
           {notifications.map(n => (
             <div key={n.id} className={`${styles.notifItem} ${!n.is_read ? styles.unread : ''}`}>
-              <div
+              <Link
+                href={`/perfil/${n.actor.username}`}
                 className={styles.notifAvatar}
-                style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}
+                style={{ background: 'var(--bg4)', color: 'var(--accent2)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
               >
                 {n.actor.avatar_initials}
-              </div>
+              </Link>
               <div className={styles.notifContent}>
-                <p className={styles.notifText}>{typeLabel(n.type, n.actor.display_name)}</p>
+                <p className={styles.notifText}>
+                  <Link href={`/perfil/${n.actor.username}`} style={{ textDecoration: 'none', color: 'inherit', fontWeight: n.is_read ? 400 : 600 }}>
+                    {typeLabel(n.type, n.actor.display_name)}
+                  </Link>
+                </p>
                 <span className={styles.notifTime}>{timeAgo(n.created_at)}</span>
               </div>
             </div>

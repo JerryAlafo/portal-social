@@ -212,10 +212,10 @@ export default function FeedPage() {
         </div>
 
         <aside className="feed-right-panel">
-          <div className="feed-panel-section">
-            <p className="feed-panel-title">Em destaque</p>
-            {trending.length > 0
-              ? trending.map((t, i) => (
+          {trending.length > 0 && (
+            <div className="feed-panel-section">
+              <p className="feed-panel-title">Em destaque</p>
+              {trending.map((t, i) => (
                 <div key={t.id} className="feed-trending-item">
                   <span className="feed-trending-rank">{i + 1}</span>
                   <div>
@@ -223,20 +223,14 @@ export default function FeedPage() {
                     <div className="feed-trending-count">{t.post_count.toLocaleString('pt')} posts</div>
                   </div>
                 </div>
-              ))
-              : [1,2,3,4,5].map(i => (
-                <div key={i} className="feed-trending-item">
-                  <span className="feed-trending-rank">{i}</span>
-                  <div className="feed-skeleton-line" style={{ width: `${70 + i * 5}%` }} />
-                </div>
-              ))
-            }
-          </div>
+              ))}
+            </div>
+          )}
 
-          <div className="feed-panel-section">
-            <p className="feed-panel-title">Sugestoes</p>
-            {suggestions.length > 0
-              ? suggestions.map(u => (
+          {suggestions.length > 0 && (
+            <div className="feed-panel-section">
+              <p className="feed-panel-title">Sugestoes</p>
+              {suggestions.map(u => (
                 <div key={u.id} className="feed-sugg-user">
                   <div className="feed-sugg-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
                     {u.avatar_initials}
@@ -249,10 +243,9 @@ export default function FeedPage() {
                     {followed.has(u.username) ? 'A seguir' : 'Seguir'}
                   </button>
                 </div>
-              ))
-              : null
-            }
-          </div>
+              ))}
+            </div>
+          )}
 
           {events.length > 0 && (
             <div className="feed-panel-section">
@@ -273,7 +266,7 @@ export default function FeedPage() {
 
           <p className="feed-panel-footer">
             Termos · Privacidade · Sobre · Ajuda<br />
-            <span>PORTAL Beta © 2026 · Tablu Tech</span>
+            <span>PORTAL Beta © 2026 · Jerry Alafo</span>
           </p>
         </aside>
       </div>

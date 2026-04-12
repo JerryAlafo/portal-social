@@ -71,6 +71,23 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
 
     if (error) throw error
 
+    // Get other participants and create notifications
+    const { data: participants } = await supabase
+      .from('conversation_participants')
+      .select('user_id')
+      .eq('conversation_id', conversation_id)
+      .neq('user_id', session.user.id)
+
+    if (participants) {
+      const notifications = participants.map(p => ({
+        user_id: p.user_id,
+        actor_id: session.user.id,
+        type: 'message',
+        reference_id: conversation_id,
+      }))
+      await supabase.from('notifications').insert(notifications)
+    }
+
     return NextResponse.json({ data: message, error: null }, { status: 201 })
   } catch {
     return NextResponse.json({ error: 'Erro ao enviar mensagem.' }, { status: 500 })

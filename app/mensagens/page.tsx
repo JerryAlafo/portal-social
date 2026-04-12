@@ -1,14 +1,17 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, Suspense } from 'react'
 import { useSession } from 'next-auth/react'
-import { Search, Send, Phone, Video, MoreHorizontal, Smile, Paperclip, Check, CheckCheck, ArrowLeft, Loader } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
+import { Search, Send, Phone, Video, MoreHorizontal, Smile, Paperclip, Check, CheckCheck, ArrowLeft, Loader, X, AlertCircle } from 'lucide-react'
 import Topbar from '@/components/layout/Topbar'
 import { getConversations, getMessages, sendMessage } from '@/services/messages'
 import type { Conversation, Message } from '@/types'
 import styles from './page.module.css'
 
-export default function MensagensPage() {
+function MensagensContent() {
+  const searchParams = useSearchParams()
+  const userParam = searchParams.get('user')
   const { data: session } = useSession()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeConv, setActiveConv] = useState<Conversation | null>(null)
@@ -20,6 +23,9 @@ export default function MensagensPage() {
   const [loadingMsgs, setLoadingMsgs] = useState(false)
   const [sending, setSending] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [initUserId, setInitUserId] = useState<string | null>(null)
+  const [showNotAvailable, setShowNotAvailable] = useState(false)
+  const [openingConv, setOpeningConv] = useState(false)
 
   // Load conversations
   useEffect(() => {
@@ -28,6 +34,40 @@ export default function MensagensPage() {
       .catch(() => {})
       .finally(() => setLoadingConvs(false))
   }, [])
+
+  // Handle user param for opening conversation
+  useEffect(() => {
+    if (userParam && !initUserId) {
+      setInitUserId(userParam)
+      setOpeningConv(true)
+      const openConversation = async () => {
+        try {
+          const res = await fetch(`/api/conversations/get-or-create?user_id=${userParam}`)
+          const data = await res.json()
+          if (data.data) {
+            setActiveConv(data.data)
+            setChatOpen(true)
+            // Add to conversations if not exists
+            setConversations(prev => {
+              const exists = prev.find(c => c.id === data.data.id)
+              if (!exists) {
+                return [data.data, ...prev]
+              }
+              return prev
+            })
+            // Load messages
+            const msgRes = await getMessages(data.data.id)
+            if (msgRes.data) setMessages(msgRes.data)
+          }
+        } catch (e) {
+          console.error(e)
+        } finally {
+          setOpeningConv(false)
+        }
+      }
+      openConversation()
+    }
+  }, [userParam, initUserId])
 
   // Load messages when conversation changes
   const loadMessages = useCallback(async (conv: Conversation) => {
@@ -169,7 +209,12 @@ export default function MensagensPage() {
 
         {/* Chat window */}
         <div className={`${styles.chatWindow} ${chatOpen ? styles.chatVisible : ''}`}>
-          {!activeConv ? (
+          {openingConv ? (
+            <div className={styles.noChat}>
+              <Loader size={24} className="spin" />
+              <p>Abrir conversa...</p>
+            </div>
+          ) : !activeConv ? (
             <div className={styles.noChat}>
               <p>Seleciona uma conversa para começar.</p>
             </div>
@@ -191,8 +236,8 @@ export default function MensagensPage() {
                   <span className={styles.chatStatus}>{activeConv.other_user.is_online ? 'Online agora' : 'Offline'}</span>
                 </div>
                 <div className={styles.chatHeaderActions}>
-                  <button className={styles.headerBtn}><Phone size={16} /></button>
-                  <button className={styles.headerBtn}><Video size={16} /></button>
+                  <button className={styles.headerBtn} onClick={() => setShowNotAvailable(true)}><Phone size={16} /></button>
+                  <button className={styles.headerBtn} onClick={() => setShowNotAvailable(true)}><Video size={16} /></button>
                   <button className={styles.headerBtn}><MoreHorizontal size={16} /></button>
                 </div>
               </div>
@@ -256,6 +301,33 @@ export default function MensagensPage() {
           )}
         </div>
       </div>
+
+      {showNotAvailable && (
+        <div className={styles.modalOverlay} onClick={() => setShowNotAvailable(false)}>
+          <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <AlertCircle size={20} color="var(--amber)" />
+              <span>Funcionalidade Indisponível</span>
+              <button className={styles.modalClose} onClick={() => setShowNotAvailable(false)}><X size={18} /></button>
+            </div>
+            <div className={styles.modalBody}>
+              <p>Esta funcionalidade ainda não está disponível nesta versão.</p>
+              <p>Em breve poderás fazer chamadas de voz e vídeo com os teus amigos!</p>
+            </div>
+            <div className={styles.modalFooter}>
+              <button className={styles.modalOkBtn} onClick={() => setShowNotAvailable(false)}>Ok</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  )
+}
+
+export default function MensagensPage() {
+  return (
+    <Suspense fallback={<div className={styles.page}><Topbar title="Mensagens" /><div className={styles.body}><div className={styles.sidebar}><div className={styles.listLoading}><Loader size={20} /></div></div><div className={styles.chatWindow}><div className={styles.noChat}><p>Carregando...</p></div></div></div></div>}>
+      <MensagensContent />
+    </Suspense>
   )
 }

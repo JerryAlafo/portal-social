@@ -1,9 +1,13 @@
 import api from './api'
 import type { Post, PaginatedResponse, ApiResponse } from '@/types'
 
-export async function getFeed(page = 1, limit = 20, category?: string): Promise<PaginatedResponse<Post>> {
+export async function getFeed(page = 1, limit = 20, category?: string, filter?: string): Promise<PaginatedResponse<Post>> {
   const params: Record<string, unknown> = { page, limit }
-  if (category && category !== 'Tudo') params.category = category
+  if (filter) {
+    params.filter = filter
+  } else if (category && category !== 'Tudo') {
+    params.category = category
+  }
   const { data } = await api.get('/feed', { params })
   return data
 }

@@ -26,6 +26,23 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       // Like
       await supabase.from('post_likes').insert({ post_id, user_id: session.user.id })
       await supabase.rpc('increment_likes', { post_id })
+
+      // Create notification for post author (if not own post)
+      const { data: post } = await supabase
+        .from('posts')
+        .select('author_id')
+        .eq('id', post_id)
+        .single()
+
+      if (post && post.author_id !== session.user.id) {
+        await supabase.from('notifications').insert({
+          user_id: post.author_id,
+          actor_id: session.user.id,
+          type: 'like',
+          reference_id: post_id,
+        })
+      }
+
       return NextResponse.json({ data: { liked: true }, error: null })
     }
   } catch {

@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import { useParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { MapPin, Link2, Calendar, MoreHorizontal, Share2, Edit3, Loader2 } from 'lucide-react'
+import { MapPin, Link2, Calendar, MoreHorizontal, Share2, Edit3, Loader2, UserPlus, UserCheck, MessageCircle, X, User, Check } from 'lucide-react'
+import Link from 'next/link'
 import Topbar from '@/components/layout/Topbar'
 
 const TABS = ['Publicacoes', 'Galeria', 'Gostos', 'Fanfics']
@@ -68,6 +69,57 @@ interface Profile {
   following_count: number
   likes_received_count: number
   created_at: string
+  is_following?: boolean
+}
+
+interface SimpleUser {
+  id: string
+  username: string
+  display_name: string
+  avatar_initials: string
+  avatar_url: string | null
+  is_following?: boolean
+}
+
+interface UserListModalProps {
+  type: 'followers' | 'following'
+  users: SimpleUser[]
+  loading: boolean
+  onClose: () => void
+}
+
+function UserListModal({ type, users, loading, onClose }: UserListModalProps) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>{type === 'followers' ? 'Seguidores' : 'A seguir'}</h3>
+          <button className="modal-close" onClick={onClose}><X size={18} /></button>
+        </div>
+        <div className="modal-body">
+          {loading ? (
+            <div className="modal-loading"><Loader2 size={20} className="spin" /></div>
+          ) : users.length === 0 ? (
+            <p className="modal-empty">Ninguém aqui ainda.</p>
+          ) : (
+            users.map(user => (
+              <Link key={user.id} href={`/perfil/${user.username}`} className="user-list-item" onClick={onClose}>
+                <div className="user-list-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
+                  {user.avatar_url
+                    ? <img src={user.avatar_url} alt={user.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                    : user.avatar_initials}
+                </div>
+                <div className="user-list-info">
+                  <span className="user-list-name">{user.display_name}</span>
+                  <span className="user-list-handle">@{user.username}</span>
+                </div>
+              </Link>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function fmt(n: number) {
@@ -93,7 +145,9 @@ function getRoleBadge(role: string) {
   return null
 }
 
-export default function PerfilPage() {
+export default function UserProfilePage() {
+  const params = useParams()
+  const username = params.username as string
   const { data: session } = useSession()
   const [activeTab, setActiveTab] = useState('Publicacoes')
   const [loading, setLoading] = useState(true)
@@ -101,18 +155,27 @@ export default function PerfilPage() {
   const [posts, setPosts] = useState<Post[]>([])
   const [fanfics, setFanfics] = useState<Fanfic[]>([])
   const [gallery, setGallery] = useState<GalleryItem[]>([])
+  const [following, setFollowing] = useState(false)
+  const [showFollowersModal, setShowFollowersModal] = useState(false)
+  const [showFollowingModal, setShowFollowingModal] = useState(false)
+  const [followersList, setFollowersList] = useState<SimpleUser[]>([])
+  const [followingList, setFollowingList] = useState<SimpleUser[]>([])
+  const [loadingFollowers, setLoadingFollowers] = useState(false)
+  const [loadingFollowing, setLoadingFollowing] = useState(false)
+  const [copied, setCopied] = useState(false)
 
-  const userId = session?.user?.id
+  const isOwnProfile = session?.user?.username === username
 
   useEffect(() => {
     async function loadProfile() {
-      if (!userId) return
+      if (!username) return
       setLoading(true)
       try {
-        const res = await fetch(`/api/users/${userId}/profile?tab=posts&limit=20`)
+        const res = await fetch(`/api/users/username/${username}/profile`)
         const json = await res.json()
         if (json.profile) {
           setProfile(json.profile)
+          setFollowing(json.profile.is_following || false)
           setPosts(json.data || [])
         }
       } catch (e) {
@@ -122,22 +185,22 @@ export default function PerfilPage() {
       }
     }
     loadProfile()
-  }, [userId])
+  }, [username])
 
   useEffect(() => {
     async function loadTabData() {
-      if (!userId || !profile) return
+      if (!profile?.id || !username) return
       try {
         if (activeTab === 'Publicacoes') {
-          const res = await fetch(`/api/users/${userId}/profile?tab=posts&limit=20`)
+          const res = await fetch(`/api/users/${profile.id}/profile?tab=posts&limit=20`)
           const json = await res.json()
           setPosts(json.data || [])
         } else if (activeTab === 'Fanfics') {
-          const res = await fetch(`/api/users/${userId}/profile?tab=fanfics&limit=20`)
+          const res = await fetch(`/api/users/${profile.id}/profile?tab=fanfics&limit=20`)
           const json = await res.json()
           setFanfics(json.data || [])
         } else if (activeTab === 'Galeria') {
-          const res = await fetch(`/api/users/${userId}/profile?tab=gallery&limit=20`)
+          const res = await fetch(`/api/users/${profile.id}/profile?tab=gallery&limit=20`)
           const json = await res.json()
           setGallery(json.data || [])
         }
@@ -146,25 +209,79 @@ export default function PerfilPage() {
       }
     }
     loadTabData()
-  }, [activeTab, userId, profile])
+  }, [activeTab, profile])
 
-  if (!session) {
-    return (
-      <div className="perfil-page">
-        <Topbar title="Perfil" />
-        <div className="perfil-body">
-          <p style={{ color: 'var(--text3)', textAlign: 'center', padding: 40 }}>
-            A carregar...
-          </p>
-        </div>
-      </div>
-    )
+  const handleFollow = async () => {
+    if (!profile) return
+    try {
+      await fetch('/api/following', {
+        method: following ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: profile.id })
+      })
+      setFollowing(!following)
+      setProfile(prev => prev ? {
+        ...prev,
+        followers_count: prev.followers_count + (following ? -1 : 1)
+      } : null)
+    } catch (e) {
+      console.error(e)
+    }
   }
 
-  if (loading && !profile) {
+  const handleShareProfile = async () => {
+    const url = `${window.location.origin}/perfil/${username}`
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `${profile?.display_name} no PORTAL`,
+          text: profile?.bio || `Veja o perfil de ${profile?.display_name}`,
+          url,
+        })
+      } else {
+        await navigator.clipboard.writeText(url)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2500)
+      }
+    } catch { /* ignore */ }
+  }
+
+  const loadFollowers = async () => {
+    if (!profile) return
+    setLoadingFollowers(true)
+    try {
+      const res = await fetch(`/api/users/${profile.id}/followers`)
+      const json = await res.json()
+      setFollowersList(json.data || [])
+    } catch { setFollowersList([]) }
+    finally { setLoadingFollowers(false) }
+  }
+
+  const loadFollowing = async () => {
+    if (!profile) return
+    setLoadingFollowing(true)
+    try {
+      const res = await fetch(`/api/users/${profile.id}/following`)
+      const json = await res.json()
+      setFollowingList(json.data || [])
+    } catch { setFollowingList([]) }
+    finally { setLoadingFollowing(false) }
+  }
+
+  const openFollowersModal = () => {
+    loadFollowers()
+    setShowFollowersModal(true)
+  }
+
+  const openFollowingModal = () => {
+    loadFollowing()
+    setShowFollowingModal(true)
+  }
+
+  if (loading) {
     return (
       <div className="perfil-page">
-        <Topbar title="Perfil" />
+        <Topbar title={username || 'Perfil'} />
         <div className="perfil-body" style={{ justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
           <Loader2 size={32} className="spin" />
         </div>
@@ -172,58 +289,93 @@ export default function PerfilPage() {
     )
   }
 
-  const initials = profile?.avatar_initials || session?.user?.name?.slice(0, 2).toUpperCase() || '??'
-  const joinDate = profile?.created_at ? new Date(profile.created_at).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' }) : ''
+  if (!profile) {
+    return (
+      <div className="perfil-page">
+        <Topbar title="Perfil" />
+        <div className="perfil-body">
+          <p style={{ color: 'var(--text3)', textAlign: 'center', padding: 40 }}>
+            Utilizador não encontrado.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const initials = profile.avatar_initials || profile.display_name?.slice(0, 2).toUpperCase() || '??'
+  const joinDate = profile.created_at ? new Date(profile.created_at).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' }) : ''
 
   return (
     <div className="perfil-page">
-      <Topbar title="Perfil" />
+      <Topbar title={profile.display_name} />
 
       <div className="perfil-body">
         <div className="perfil-main-col">
 
-          {/* Banner */}
           <div className="perfil-banner">
             <div className="perfil-banner-overlay" />
-            <button className="perfil-banner-edit-btn">
-              <Edit3 size={12} /> Editar banner
-            </button>
+            {isOwnProfile && (
+              <button className="perfil-banner-edit-btn">
+                <Edit3 size={12} /> Editar banner
+              </button>
+            )}
           </div>
 
-          {/* Info area */}
           <div className="perfil-info-area">
             <div className="perfil-avatar-row">
               <div className="perfil-avatar-wrap">
                 <div className="perfil-avatar">{initials}</div>
-                <button className="perfil-avatar-edit-btn"><Edit3 size={12} /></button>
+                {isOwnProfile && <button className="perfil-avatar-edit-btn"><Edit3 size={12} /></button>}
               </div>
               <div className="perfil-name-meta">
                 <div className="perfil-name">
-                  {profile?.display_name || session.user.name}
-                  {getRoleBadge(profile?.role || 'member')}
+                  {profile.display_name}
+                  {getRoleBadge(profile.role)}
                 </div>
-                <div className="perfil-handle">@{profile?.username || session.user.username} · Membro desde {joinDate}</div>
+                <div className="perfil-handle">@{profile.username} · Membro desde {joinDate}</div>
                 <div className="perfil-badges">
-                  {profile?.role === 'superuser' && <span className="perfil-badge-su">Super User</span>}
-                  {profile?.level && <span className="perfil-badge-level">Nivel {profile.level}</span>}
+                  {profile.role === 'superuser' && <span className="perfil-badge-su">Super User</span>}
+                  {profile.level && <span className="perfil-badge-level">Nivel {profile.level}</span>}
                 </div>
               </div>
-              <div className="perfil-profile-actions">
-                <button className="perfil-edit-btn">Editar Perfil</button>
-                <button className="perfil-icon-btn"><Share2 size={14} /></button>
-                <button className="perfil-icon-btn"><MoreHorizontal size={14} /></button>
-              </div>
+              {!isOwnProfile && session && (
+                <div className="perfil-profile-actions">
+                  <button 
+                    className={`perfil-follow-btn ${following ? 'perfil-following' : ''}`}
+                    onClick={handleFollow}
+                  >
+                    {following ? <UserCheck size={14} /> : <UserPlus size={14} />}
+                    {following ? 'Seguindo' : 'Seguir'}
+                  </button>
+                  <Link href={`/mensagens?user=${profile.id}`} className="perfil-msg-btn">
+                    <MessageCircle size={14} />
+                  </Link>
+                  <button className="perfil-icon-btn" onClick={handleShareProfile}>
+                    {copied ? <Check size={14} /> : <Share2 size={14} />}
+                  </button>
+                  <button className="perfil-icon-btn"><MoreHorizontal size={14} /></button>
+                </div>
+              )}
+              {isOwnProfile && (
+                <div className="perfil-profile-actions">
+                  <button className="perfil-edit-btn">Editar Perfil</button>
+                  <button className="perfil-icon-btn" onClick={handleShareProfile}>
+                    {copied ? <Check size={14} /> : <Share2 size={14} />}
+                  </button>
+                  <button className="perfil-icon-btn"><MoreHorizontal size={14} /></button>
+                </div>
+              )}
             </div>
 
             <p className="perfil-bio">
-              {profile?.bio || 'Sem bio ainda.'}
+              {profile.bio || 'Sem bio ainda.'}
             </p>
 
             <div className="perfil-details">
-              {profile?.location && (
+              {profile.location && (
                 <span className="perfil-detail"><MapPin size={13} /> {profile.location}</span>
               )}
-              {profile?.website && (
+              {profile.website && (
                 <span className="perfil-detail"><Link2 size={13} /> {profile.website}</span>
               )}
               <span className="perfil-detail"><Calendar size={13} /> Juntou-se em {joinDate}</span>
@@ -231,25 +383,24 @@ export default function PerfilPage() {
 
             <div className="perfil-stats">
               <div className="perfil-stat">
-                <span className="perfil-stat-num">{fmt(profile?.posts_count || 0)}</span>
+                <span className="perfil-stat-num">{fmt(profile.posts_count)}</span>
                 <span className="perfil-stat-label">Publicacoes</span>
               </div>
-              <div className="perfil-stat">
-                <span className="perfil-stat-num">{fmt(profile?.followers_count || 0)}</span>
+              <button className="perfil-stat perfil-stat-clickable" onClick={openFollowersModal}>
+                <span className="perfil-stat-num">{fmt(profile.followers_count)}</span>
                 <span className="perfil-stat-label">Seguidores</span>
-              </div>
-              <div className="perfil-stat">
-                <span className="perfil-stat-num">{fmt(profile?.following_count || 0)}</span>
+              </button>
+              <button className="perfil-stat perfil-stat-clickable" onClick={openFollowingModal}>
+                <span className="perfil-stat-num">{fmt(profile.following_count)}</span>
                 <span className="perfil-stat-label">A seguir</span>
-              </div>
+              </button>
               <div className="perfil-stat">
-                <span className="perfil-stat-num">{fmt(profile?.likes_received_count || 0)}</span>
+                <span className="perfil-stat-num">{fmt(profile.likes_received_count)}</span>
                 <span className="perfil-stat-label">Gostos recebidos</span>
               </div>
             </div>
           </div>
 
-          {/* Tabs */}
           <div className="perfil-tabs">
             {TABS.map(t => (
               <button
@@ -262,7 +413,6 @@ export default function PerfilPage() {
             ))}
           </div>
 
-          {/* Tab content */}
           {activeTab === 'Publicacoes' && (
             <div className="perfil-posts-col">
               {posts.length === 0 ? (
@@ -342,16 +492,25 @@ export default function PerfilPage() {
             </div>
           )}
         </div>
-
-        {/* Right col */}
-        <aside className="perfil-right-col">
-          <p className="perfil-panel-title">Favoritos de anime</p>
-          <p style={{ color: 'var(--text3)', fontSize: 13 }}>Em breve...</p>
-
-          <p className="perfil-panel-title" style={{ marginTop: 24 }}>Seguidores recentes</p>
-          <p style={{ color: 'var(--text3)', fontSize: 13 }}>Em breve...</p>
-        </aside>
       </div>
+
+      {showFollowersModal && (
+        <UserListModal
+          type="followers"
+          users={followersList}
+          loading={loadingFollowers}
+          onClose={() => setShowFollowersModal(false)}
+        />
+      )}
+
+      {showFollowingModal && (
+        <UserListModal
+          type="following"
+          users={followingList}
+          loading={loadingFollowing}
+          onClose={() => setShowFollowingModal(false)}
+        />
+      )}
     </div>
   )
 }

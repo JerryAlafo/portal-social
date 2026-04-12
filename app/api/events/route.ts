@@ -8,13 +8,14 @@ export async function GET() {
     const { data, error } = await supabase
       .from('events')
       .select('*')
-      .order('date', { ascending: true })
+      .order('event_date', { ascending: true })
+      .limit(10)
 
     if (error) throw error
 
     return NextResponse.json({ data: data ?? [], error: null })
   } catch (err) {
     console.error('Events API error:', err)
-    return NextResponse.json({ error: 'Erro ao carregar eventos.' }, { status: 500 })
+    return NextResponse.json({ data: [], error: null })
   }
 }

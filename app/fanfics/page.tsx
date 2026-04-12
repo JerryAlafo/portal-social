@@ -61,8 +61,8 @@ export default function FanficsPage() {
   }, [])
 
   const filtered = fanfics
-    .filter(f => activeGenre === 'Tudo' || f.genre === activeGenre)
-    .filter(f => activeStatus === 'Todos' || f.status === activeStatus)
+    .filter(f => activeGenre === 'Tudo' || f.genre?.toLowerCase().includes(activeGenre.toLowerCase()))
+    .filter(f => activeStatus === 'Todos' || f.status?.toLowerCase().includes(activeStatus.toLowerCase()))
     .sort((a, b) => {
       if (sort === 'reads') return b.reads_count - a.reads_count
       if (sort === 'likes') return b.likes_count - a.likes_count

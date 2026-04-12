@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { Heart, MessageCircle, Share2, MoreHorizontal, Send, Loader2, Check, Copy, Trash2, Pencil, Reply, X } from 'lucide-react'
 import type { Post, Comment } from '@/types'
@@ -66,15 +67,15 @@ function CommentItem({ comment, postId, myId, myRole, onDelete, onEdit, onLike, 
 
   return (
     <div className={styles.commentItem} style={{ marginLeft: depth > 0 ? 24 : 0 }}>
-      <div className={styles.commentAvatar}>
+      <Link href={`/perfil/${comment.author.username}`} className={styles.commentAvatar} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', flexShrink: 0 }}>
         {comment.author.avatar_url
           ? <img src={comment.author.avatar_url} alt={comment.author.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
           : comment.author.avatar_initials}
-      </div>
+      </Link>
       <div className={styles.commentBubble}>
         <div className={styles.commentMeta}>
-          <span className={styles.commentAuthor}>{comment.author.display_name}</span>
-          <span className={styles.commentHandle}>@{comment.author.username}</span>
+          <Link href={`/perfil/${comment.author.username}`} className={styles.commentAuthor} style={{ textDecoration: 'none', color: 'inherit' }}>{comment.author.display_name}</Link>
+          <Link href={`/perfil/${comment.author.username}`} className={styles.commentHandle} style={{ textDecoration: 'none' }}>@{comment.author.username}</Link>
           <span className={styles.commentTime}>{timeAgo(comment.created_at)}</span>
           {comment.updated_at && <span className={styles.commentEdited}>(editado)</span>}
         </div>
@@ -294,20 +295,20 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
     <article className={styles.card}>
 
       <div className={styles.header}>
-        <div className={styles.avatar} style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
+        <Link href={`/perfil/${author.username}`} className={styles.avatar} style={{ background: 'var(--bg4)', color: 'var(--accent2)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
           {author.avatar_url
             ? <img src={author.avatar_url} alt={author.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
             : author.avatar_initials}
-        </div>
+        </Link>
 
         <div className={styles.authorInfo}>
-          <div className={styles.authorName}>
+          <Link href={`/perfil/${author.username}`} className={styles.authorName} style={{ textDecoration: 'none', color: 'inherit' }}>
             {author.display_name}
             {author.role === 'superuser' && <span className={styles.badgeSU}>Super User</span>}
             {author.role === 'mod' && <span className={styles.badgeMod}>Moderador</span>}
-          </div>
+          </Link>
           <div className={styles.meta}>
-            <span>@{author.username}</span>
+            <Link href={`/perfil/${author.username}`} style={{ textDecoration: 'none', color: 'inherit' }}>@{author.username}</Link>
             <span>{timeAgo(post.created_at)}</span>
             {post.category && <span>{post.category}</span>}
           </div>

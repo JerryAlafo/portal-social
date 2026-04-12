@@ -11,6 +11,7 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get('page') ?? '1')
     const limit = parseInt(searchParams.get('limit') ?? '20')
     const category = searchParams.get('category')
+    const filter = searchParams.get('filter')
     const offset = (page - 1) * limit
 
     const supabase = createServerClient()
@@ -24,7 +25,25 @@ export async function GET(request: Request) {
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
-    if (category && category !== 'Tudo') {
+    if (filter === 'following') {
+      const { data: following } = await supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', session.user.id)
+      
+      const followingIds = following?.map(f => f.following_id) ?? []
+      if (followingIds.length > 0) {
+        query = query.in('author_id', followingIds)
+      } else {
+        return NextResponse.json({ data: [], page, limit, error: null })
+      }
+    } else if (filter === 'trending') {
+      query = query.order('likes_count', { ascending: false }).order('shares_count', { ascending: false })
+    } else if (filter === 'hot') {
+      query = query.order('likes_count', { ascending: false }).order('comments_count', { ascending: false })
+    } else if (filter === 'top') {
+      query = query.order('likes_count', { ascending: false })
+    } else if (category && category !== 'Tudo') {
       query = query.eq('category', category)
     }
 

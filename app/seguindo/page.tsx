@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { Loader2 } from 'lucide-react'
 import Topbar from '@/components/layout/Topbar'
@@ -21,7 +22,7 @@ export default function SeguindoPage() {
       try {
         const [followingRes, feedRes] = await Promise.all([
           getFollowing(),
-          getFeed(1, 20, 'Following'),
+          getFeed(1, 20, undefined, 'following'),
         ])
         if (followingRes.data) setFollowing(followingRes.data)
         if (feedRes.data) setPosts(feedRes.data)
@@ -78,25 +79,28 @@ export default function SeguindoPage() {
                   <div key={p.id} className={`animate-fade-in-up animate-delay-${Math.min(i + 1, 4)}`}>
                     <div className="post-card">
                       <div className="post-header">
-                        <div className="post-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
+                        <Link href={`/perfil/${p.author.username}`} className="post-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
                           {p.author.avatar_url
                             ? <img src={p.author.avatar_url} alt={p.author.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
                             : p.author.avatar_initials}
-                        </div>
+                        </Link>
                         <div className="post-author-info">
-                          <div className="post-author-name">
+                          <Link href={`/perfil/${p.author.username}`} className="post-author-name" style={{ textDecoration: 'none', color: 'inherit' }}>
                             {p.author.display_name}
                             {p.author.role === 'superuser' && <span className="post-badge-su">Super User</span>}
                             {p.author.role === 'mod' && <span className="post-badge-mod">Moderador</span>}
-                          </div>
+                          </Link>
                           <div className="post-meta">
-                            <span>@{p.author.username}</span>
+                            <Link href={`/perfil/${p.author.username}`} style={{ textDecoration: 'none', color: 'inherit' }}>@{p.author.username}</Link>
                             {p.category && <span>{p.category}</span>}
                           </div>
                         </div>
                       </div>
                       <div className="post-body">
                         <p className="post-text">{p.content}</p>
+                        {p.image_url && (
+                          <img src={p.image_url} alt="Imagem do post" className="post-image" style={{ maxWidth: '100%', borderRadius: 'var(--radius)', marginTop: 12, maxHeight: 300, objectFit: 'cover' }} />
+                        )}
                       </div>
                     </div>
                   </div>

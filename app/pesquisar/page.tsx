@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Search, TrendingUp, Hash, User, FileText, X, Loader2 } from 'lucide-react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { Search, TrendingUp, Hash, User, FileText, X, Loader2, MessageCircle } from 'lucide-react'
+import Link from 'next/link'
 import Topbar from '@/components/layout/Topbar'
 import { search } from '@/services/search'
 import { getTrending } from '@/services/trending'
@@ -14,8 +16,10 @@ function fmt(n: number) {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n)
 }
 
-export default function PesquisarPage() {
-  const [query, setQuery] = useState('')
+function PesquisarContent() {
+  const searchParams = useSearchParams()
+  const urlQuery = searchParams.get('q') || ''
+  const [query, setQuery] = useState(urlQuery)
   const [activeTab, setActiveTab] = useState('Tudo')
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<{ users: Profile[]; posts: Post[]; tags: TrendingTag[] }>({ users: [], posts: [], tags: [] })
@@ -58,7 +62,6 @@ export default function PesquisarPage() {
 
       <div className="pesquisar-body">
         <div className="pesquisar-main-col">
-          {/* Search bar */}
           <div className="pesquisar-search-wrap">
             <div className="pesquisar-search-bar">
               <Search size={16} color="var(--text3)" />
@@ -77,7 +80,6 @@ export default function PesquisarPage() {
             </div>
           </div>
 
-          {/* Tabs */}
           {hasQuery && (
             <div className="pesquisar-tabs">
               {TABS.map(t => (
@@ -90,15 +92,13 @@ export default function PesquisarPage() {
             </div>
           )}
 
-          {/* Loading */}
           {loading && (
             <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
               <Loader2 size={24} className="spin" />
             </div>
           )}
 
-          {/* No query — show trending */}
-          {!hasQuery && !loading && (
+          {!hasQuery && !loading && trending.length > 0 && (
             <div className="pesquisar-section">
               <div className="pesquisar-section-title">
                 <TrendingUp size={16} />
@@ -116,7 +116,6 @@ export default function PesquisarPage() {
             </div>
           )}
 
-          {/* Results with query */}
           {hasQuery && !loading && (activeTab === 'Tudo' || activeTab === 'Membros') && (
             <div className="pesquisar-section">
               <div className="pesquisar-section-title"><User size={15} /> Membros</div>
@@ -124,20 +123,25 @@ export default function PesquisarPage() {
                 ? <p className="pesquisar-empty">Nenhum membro encontrado para &quot;{query}&quot;</p>
                 : results.users.map(u => (
                   <div key={u.id} className="pesquisar-user-result">
-                    <div className="pesquisar-user-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
+                    <Link href={`/perfil/${u.username}`} className="pesquisar-user-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
                       {u.avatar_initials || u.display_name?.slice(0, 2).toUpperCase()}
-                    </div>
+                    </Link>
                     <div className="pesquisar-user-info">
-                      <span className="pesquisar-user-name">{u.display_name}</span>
+                      <Link href={`/perfil/${u.username}`} className="pesquisar-user-name">{u.display_name}</Link>
                       <span className="pesquisar-user-handle">@{u.username} · {fmt(u.followers_count || 0)} seguidores</span>
                       {u.bio && <span className="pesquisar-user-bio">{u.bio}</span>}
                     </div>
-                    <button
-                      className={`pesquisar-follow-btn ${followed.has(u.username) ? 'pesquisar-following-btn' : ''}`}
-                      onClick={() => handleFollow(u.id, u.username)}
-                    >
-                      {followed.has(u.username) ? 'A seguir' : 'Seguir'}
-                    </button>
+                    <div className="pesquisar-user-actions">
+                      <Link href={`/mensagens?user=${u.id}`} className="pesquisar-msg-btn">
+                        <MessageCircle size={14} />
+                      </Link>
+                      <button
+                        className={`pesquisar-follow-btn ${followed.has(u.username) ? 'pesquisar-following-btn' : ''}`}
+                        onClick={() => handleFollow(u.id, u.username)}
+                      >
+                        {followed.has(u.username) ? 'A seguir' : 'Seguir'}
+                      </button>
+                    </div>
                   </div>
                 ))
               }
@@ -173,25 +177,28 @@ export default function PesquisarPage() {
                     {results.posts.map(p => (
                       <div key={p.id} className="post-card">
                         <div className="post-header">
-                          <div className="post-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
+                          <Link href={`/perfil/${p.author.username}`} className="post-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
                             {p.author.avatar_url
                               ? <img src={p.author.avatar_url} alt={p.author.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
                               : p.author.avatar_initials}
-                          </div>
+                          </Link>
                           <div className="post-author-info">
-                            <div className="post-author-name">
+                            <Link href={`/perfil/${p.author.username}`} className="post-author-name" style={{ textDecoration: 'none', color: 'inherit' }}>
                               {p.author.display_name}
                               {p.author.role === 'superuser' && <span className="post-badge-su">Super User</span>}
                               {p.author.role === 'mod' && <span className="post-badge-mod">Moderador</span>}
-                            </div>
+                            </Link>
                             <div className="post-meta">
-                              <span>@{p.author.username}</span>
+                              <Link href={`/perfil/${p.author.username}`} style={{ textDecoration: 'none', color: 'inherit' }}>@{p.author.username}</Link>
                               {p.category && <span>{p.category}</span>}
                             </div>
                           </div>
                         </div>
                         <div className="post-body">
                           <p className="post-text">{p.content}</p>
+                          {p.image_url && (
+                            <img src={p.image_url} alt="Imagem do post" style={{ maxWidth: '100%', borderRadius: 'var(--radius)', marginTop: 12, maxHeight: 300, objectFit: 'cover' }} />
+                          )}
                         </div>
                       </div>
                     ))}
@@ -202,7 +209,6 @@ export default function PesquisarPage() {
           )}
         </div>
 
-        {/* Right panel */}
         <aside className="pesquisar-right-panel">
           <p className="pesquisar-panel-title">Tags populares</p>
           {trending.slice(0, 8).map(t => (
@@ -214,5 +220,24 @@ export default function PesquisarPage() {
         </aside>
       </div>
     </div>
+  )
+}
+
+export default function PesquisarPage() {
+  return (
+    <Suspense fallback={
+      <div className="pesquisar-page">
+        <Topbar title="Pesquisar" />
+        <div className="pesquisar-body">
+          <div className="pesquisar-main-col">
+            <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+              <Loader2 size={24} className="spin" />
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <PesquisarContent />
+    </Suspense>
   )
 }

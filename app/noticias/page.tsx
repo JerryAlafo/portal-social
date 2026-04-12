@@ -56,7 +56,7 @@ export default function NoticiasPage() {
   }, [])
 
   const filtered = activeCat === 'Tudo' ? news : news.filter(n => 
-    n.category?.toLowerCase() === activeCat.toLowerCase()
+    n.category?.toLowerCase().includes(activeCat.toLowerCase())
   )
 
   const formatDate = (dateStr: string) => {
