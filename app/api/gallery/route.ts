@@ -1,12 +1,8 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
 import { createServerClient } from '@/lib/supabase-server'
 
 export async function GET(request: Request) {
   try {
-    const session = await auth()
-    if (!session) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
-
     const { searchParams } = new URL(request.url)
     const category = searchParams.get('category')
 
@@ -14,7 +10,7 @@ export async function GET(request: Request) {
 
     let query = supabase
       .from('gallery_items')
-      .select('*, author:profiles!gallery_items_author_id_fkey(id, username, display_name, avatar_initials)')
+      .select('*, author:profiles!gallery_items_author_id_fkey(id, username, display_name, avatar_initials, avatar_url)')
       .order('created_at', { ascending: false })
       .limit(40)
 

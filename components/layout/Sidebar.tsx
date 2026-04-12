@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -15,8 +16,8 @@ import styles from './Sidebar.module.css'
 const navMain = [
   { href: '/feed',      icon: Home,          label: 'Feed' },
   { href: '/pesquisar', icon: Search,        label: 'Pesquisar' },
-  { href: '/seguindo',  icon: Heart,         label: 'Seguindo',  badge: '3' },
-  { href: '/mensagens', icon: MessageCircle, label: 'Mensagens', badge: '5', badgeRed: true },
+  { href: '/seguindo',  icon: Heart,         label: 'Seguindo' },
+  { href: '/mensagens', icon: MessageCircle, label: 'Mensagens' },
   { href: '/explorar',  icon: TrendingUp,    label: 'Explorar' },
 ]
 
@@ -37,6 +38,28 @@ export default function Sidebar() {
   const pathname = usePathname()
   const { isOpen, close } = useSidebar()
   const { data: session } = useSession()
+  const [unreadMessages, setUnreadMessages] = useState(0)
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const res = await fetch('/api/counts')
+        const data = await res.json()
+        if (data.data) {
+          setUnreadMessages(data.data.unreadMessages)
+          setUnreadNotifications(data.data.unreadNotifications)
+        }
+      } catch (err) {
+        console.error('Erro ao buscar contagens:', err)
+      }
+    }
+    if (session) {
+      fetchCounts()
+      const interval = setInterval(fetchCounts, 30000)
+      return () => clearInterval(interval)
+    }
+  }, [session])
 
   const user = session?.user
   const displayName = user?.name ?? 'Utilizador'
@@ -65,22 +88,27 @@ export default function Sidebar() {
 
       <nav className={styles.nav}>
         <p className={styles.navLabel}>Principal</p>
-        {navMain.map(({ href, icon: Icon, label, badge, badgeRed }) => (
-          <Link
-            key={href}
-            href={href}
-            className={`${styles.navItem} ${pathname === href ? styles.active : ''}`}
-            onClick={close}
-          >
-            <Icon size={18} />
-            {label}
-            {badge && (
-              <span className={`${styles.badge} ${badgeRed ? styles.badgeRed : ''}`}>
-                {badge}
-              </span>
-            )}
-          </Link>
-        ))}
+        {navMain.map(({ href, icon: Icon, label }) => {
+          const showBadge = href === '/mensagens' && unreadMessages > 0
+          const badge = showBadge ? String(unreadMessages) : null
+
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={`${styles.navItem} ${pathname === href ? styles.active : ''}`}
+              onClick={close}
+            >
+              <Icon size={18} />
+              {label}
+              {badge && (
+                <span className={`${styles.badge} ${styles.badgeRed}`}>
+                  {badge}
+                </span>
+              )}
+            </Link>
+          )
+        })}
 
         <p className={styles.navLabel}>Area Especial</p>
         {navEspecial.map(({ href, icon: Icon, label }) => (

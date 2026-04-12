@@ -1,27 +1,90 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Pin, ExternalLink, Clock } from 'lucide-react'
 import Topbar from '@/components/layout/Topbar'
 import styles from './page.module.css'
 
 const CATS = ['Tudo', 'Anime', 'Manga', 'Industria', 'Eventos', 'PORTAL']
 
-const NEWS = [
-  { id: '1', cat: 'Anime', catColor: 'var(--accent2)', title: 'Demon Slayer: Infinity Castle confirma data de estreia do segundo filme', summary: 'A Ufotable anunciou oficialmente que o segundo filme do arco Infinity Castle chegara aos cinemas japoneses em Outubro de 2026, com estreia global em Novembro. Os bilhetes para pre-venda ja estao disponiveis.', author: 'PortalAdmin', authorRole: 'superuser', time: 'Ha 1 hora', pinned: true, reads: '12.4k' },
-  { id: '2', cat: 'Manga', catColor: 'var(--amber)', title: 'One Piece capitulo 1120: Oda revela detalhes do maior twist da saga', summary: 'O mais recente capitulo de One Piece trouxe uma revelacao que sacudiu toda a comunidade. Oda-sensei confirma teoria que circulava ha mais de cinco anos sobre a verdadeira natureza do Gear 5.', author: 'YukiSenpai', authorRole: 'mod', time: 'Ha 3 horas', pinned: false, reads: '8.7k' },
-  { id: '3', cat: 'Industria', catColor: 'var(--green)', title: 'Crunchyroll anuncia parceria com studio MAPPA para exclusivos 2027', summary: 'A plataforma de streaming confirmou uma parceria de tres anos com o MAPPA, garantindo estreias exclusivas de pelo menos seis novos titulos por ano, incluindo sequelas de series muito aguardadas.', author: 'PortalAdmin', authorRole: 'superuser', time: 'Ha 5 horas', pinned: false, reads: '6.2k' },
-  { id: '4', cat: 'PORTAL', catColor: 'var(--pink)', title: 'PORTAL ultrapassa 25.000 membros registados na primeira semana', summary: 'A nossa comunidade continua a crescer a um ritmo incrivel. Agradecemos a todos os otakus que se juntaram a nos nesta primeira semana de beta. Novidades grandes a caminho!', author: 'PortalAdmin', authorRole: 'superuser', time: 'Ha 1 dia', pinned: true, reads: '15.1k' },
-  { id: '5', cat: 'Anime', catColor: 'var(--accent2)', title: 'Jujutsu Kaisen: Temporada 3 ganha trailer oficial com data de estreia', summary: 'A tao aguardada terceira temporada de JJK finalmente tem data confirmada: primavera de 2026. O trailer revelou a adaptacao do arco Culling Game com uma qualidade de animacao impressionante.', author: 'AkiraFan99', authorRole: null, time: 'Ha 2 dias', pinned: false, reads: '9.3k' },
-  { id: '6', cat: 'Eventos', catColor: 'var(--red)', title: 'Lisboa Anime Fest 2026 divulga lineup completo de convidados', summary: 'O maior festival de cultura japonesa de Portugal revela os seus convidados especiais para a edicao de Abril, incluindo um voice actor de Demon Slayer e um cosplayer profissional internacionalmente reconhecido.', author: 'YukiSenpai', authorRole: 'mod', time: 'Ha 3 dias', pinned: false, reads: '4.8k' },
-]
+interface NewsItem {
+  id: string
+  title: string
+  summary: string
+  content: string
+  category: string
+  author_id: string
+  image_url: string
+  reads_count: number
+  pinned: boolean
+  published_at: string
+  author?: {
+    username: string
+    role?: string
+  }
+}
 
 export default function NoticiasPage() {
   const [activeCat, setActiveCat] = useState('Tudo')
+  const [news, setNews] = useState<NewsItem[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const filtered = activeCat === 'Tudo' ? NEWS : NEWS.filter(n => n.cat === activeCat)
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        const res = await fetch('/api/news')
+        const data = await res.json()
+        if (data.data) setNews(data.data)
+      } catch (err) {
+        console.error('Erro ao carregar noticias:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchNews()
+  }, [])
+
+  const filtered = activeCat === 'Tudo' ? news : news.filter(n => n.category === activeCat)
   const pinned = filtered.filter(n => n.pinned)
   const rest = filtered.filter(n => !n.pinned)
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diff = Math.floor((now.getTime() - date.getTime()) / 1000)
+    if (diff < 3600) return `Há ${Math.floor(diff / 60)} minutos`
+    if (diff < 86400) return `Há ${Math.floor(diff / 3600)} horas`
+    if (diff < 604800) return `Há ${Math.floor(diff / 86400)} dias`
+    return date.toLocaleDateString('pt-PT')
+  }
+
+  const fmt = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n)
+
+  if (loading) {
+    return (
+      <div className={styles.page}>
+        <Topbar title="Noticias" />
+        <div className={styles.body}>
+          <div className={styles.mainCol}>
+            <div className={styles.loading}>A carregar noticias...</div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (news.length === 0) {
+    return (
+      <div className={styles.page}>
+        <Topbar title="Noticias" />
+        <div className={styles.body}>
+          <div className={styles.mainCol}>
+            <div className={styles.empty}>Ainda nao ha noticias publicadas.</div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={styles.page}>
@@ -37,24 +100,24 @@ export default function NoticiasPage() {
           {pinned.length > 0 && (
             <div className={styles.section}>
               <div className={styles.sectionLabel}><Pin size={13} /> Fixadas</div>
-              {pinned.map(n => <NewsCard key={n.id} item={n} />)}
+              {pinned.map(n => <NewsCard key={n.id} item={n} formatDate={formatDate} fmt={fmt} />)}
             </div>
           )}
 
           <div className={styles.section}>
             {pinned.length > 0 && <div className={styles.sectionLabel}><Clock size={13} /> Recentes</div>}
-            {rest.map(n => <NewsCard key={n.id} item={n} />)}
+            {rest.map(n => <NewsCard key={n.id} item={n} formatDate={formatDate} fmt={fmt} />)}
           </div>
         </div>
 
         <aside className={styles.rightPanel}>
           <p className={styles.panelTitle}>Mais lidas</p>
-          {NEWS.sort((a, b) => parseInt(b.reads) - parseInt(a.reads)).slice(0, 5).map((n, i) => (
+          {[...news].sort((a, b) => b.reads_count - a.reads_count).slice(0, 5).map((n, i) => (
             <div key={n.id} className={styles.topItem}>
               <span className={styles.topRank}>{String(i + 1).padStart(2, '0')}</span>
               <div>
                 <div className={styles.topTitle}>{n.title}</div>
-                <div className={styles.topMeta}>{n.reads} leituras</div>
+                <div className={styles.topMeta}>{fmt(n.reads_count)} leituras</div>
               </div>
             </div>
           ))}
@@ -64,22 +127,30 @@ export default function NoticiasPage() {
   )
 }
 
-function NewsCard({ item }: { item: typeof NEWS[0] }) {
+function NewsCard({ item, formatDate, fmt }: { item: NewsItem; formatDate: (d: string) => string; fmt: (n: number) => string }) {
+  const catColors: Record<string, string> = {
+    'Anime': 'var(--accent2)',
+    'Manga': 'var(--amber)',
+    'Industria': 'var(--green)',
+    'Eventos': 'var(--red)',
+    'PORTAL': 'var(--pink)',
+  }
+
   return (
     <article className={`${styles.newsCard} ${item.pinned ? styles.pinnedCard : ''}`}>
       {item.pinned && <div className={styles.pinnedTag}><Pin size={11} /> Fixada</div>}
       <div className={styles.newsMeta}>
-        <span className={styles.newsCat} style={{ color: item.catColor }}>{item.cat}</span>
-        <span className={styles.newsTime}>{item.time}</span>
-        <span className={styles.newsReads}>{item.reads} leituras</span>
+        <span className={styles.newsCat} style={{ color: catColors[item.category] || 'var(--text2)' }}>{item.category}</span>
+        <span className={styles.newsTime}>{formatDate(item.published_at)}</span>
+        <span className={styles.newsReads}>{fmt(item.reads_count)} leituras</span>
       </div>
       <h2 className={styles.newsTitle}>{item.title}</h2>
       <p className={styles.newsSummary}>{item.summary}</p>
       <div className={styles.newsFooter}>
         <div className={styles.newsAuthor}>
-          Por <strong>{item.author}</strong>
-          {item.authorRole === 'superuser' && <span className={styles.badgeSU}>Super User</span>}
-          {item.authorRole === 'mod' && <span className={styles.badgeMod}>Mod</span>}
+          Por <strong>{item.author?.username || 'Portal'}</strong>
+          {item.author?.role === 'superuser' && <span className={styles.badgeSU}>Super User</span>}
+          {item.author?.role === 'mod' && <span className={styles.badgeMod}>Mod</span>}
         </div>
         <button className={styles.readMore}>Ler mais <ExternalLink size={12} /></button>
       </div>

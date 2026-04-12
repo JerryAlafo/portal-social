@@ -1,12 +1,8 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
 import { createServerClient } from '@/lib/supabase-server'
 
 export async function GET(request: Request) {
   try {
-    const session = await auth()
-    if (!session) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
-
     const { searchParams } = new URL(request.url)
     const category = searchParams.get('category')
 
