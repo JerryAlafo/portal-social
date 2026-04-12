@@ -7,7 +7,7 @@ import { useSession } from 'next-auth/react'
 import {
   Home, Search, Heart, MessageCircle, TrendingUp,
   BookOpen, Calendar, Layers, Image, User, Settings,
-  LogOut, Star, ShieldAlert, X
+  LogOut, Star, ShieldAlert, X, Sparkles
 } from 'lucide-react'
 import { useSidebar } from '@/lib/sidebar-context'
 import { logout } from '@/services/auth'
@@ -26,6 +26,7 @@ const navEspecial = [
   { href: '/eventos',  icon: Calendar, label: 'Eventos' },
   { href: '/fanfics',  icon: Layers,   label: 'Fanfics' },
   { href: '/galeria',  icon: Image,    label: 'Galeria' },
+  { href: '/ia-portal', icon: Sparkles, label: 'IA Portal' },
 ]
 
 const navConta = [
