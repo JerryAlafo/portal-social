@@ -228,6 +228,7 @@ export default function LoginPage() {
               onVerify={setTurnstileToken}
               onExpire={() => setTurnstileToken('')}
               theme="auto"
+              size="flexible"
             />
 
             <button type="submit" className="login-submit" disabled={loading || !turnstileToken}>

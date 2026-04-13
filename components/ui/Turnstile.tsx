@@ -18,6 +18,7 @@ interface TurnstileOptions {
   'error-callback'?: () => void
   'expired-callback'?: () => void
   theme?: 'light' | 'dark' | 'auto'
+  size?: 'normal' | 'compact' | 'flexible'
 }
 
 interface TurnstileProps {
@@ -26,6 +27,7 @@ interface TurnstileProps {
   onError?: () => void
   onExpire?: () => void
   theme?: 'light' | 'dark' | 'auto'
+  size?: 'normal' | 'compact' | 'flexible'
   className?: string
 }
 
@@ -60,7 +62,7 @@ function loadTurnstileScript(): Promise<void> {
   return scriptLoadPromise
 }
 
-export default function Turnstile({ siteKey, onVerify, onError, onExpire, theme = 'auto', className }: TurnstileProps) {
+export default function Turnstile({ siteKey, onVerify, onError, onExpire, theme = 'auto', size = 'normal', className }: TurnstileProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const widgetIdRef = useRef<string | null>(null)
   const [isReady, setIsReady] = useState(false)
@@ -100,6 +102,7 @@ export default function Turnstile({ siteKey, onVerify, onError, onExpire, theme 
       'error-callback': () => onErrorRef.current?.(),
       'expired-callback': () => onExpireRef.current?.(),
       theme,
+      size,
     })
 
     widgetIdRef.current = widgetId
@@ -114,10 +117,10 @@ export default function Turnstile({ siteKey, onVerify, onError, onExpire, theme 
       }
       widgetIdRef.current = null
     }
-  }, [isReady, siteKey, theme])
+  }, [isReady, siteKey, theme, size])
 
   return (
-    <div className="login-turnstile" style={{ margin: '0.5rem 0 0.75rem' }}>
+    <div className={`login-turnstile${className ? ` ${className}` : ''}`} style={{ margin: '0.5rem 0 0.75rem' }}>
       <div ref={containerRef} />
     </div>
   )
