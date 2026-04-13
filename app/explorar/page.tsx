@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { TrendingUp, Flame, Clock, Star, Loader2 } from 'lucide-react'
 import Topbar from '@/components/layout/Topbar'
@@ -9,6 +9,7 @@ import { getSuggestions } from '@/services/suggestions'
 import { getEvents } from '@/services/events'
 import { followUser } from '@/services/following'
 import type { Post, Profile, Event } from '@/types'
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll'
 
 const FILTERS = [
   { id: 'trending', label: 'Em Alta', icon: TrendingUp },
@@ -30,30 +31,69 @@ export default function ExplorarPage() {
   const [suggestions, setSuggestions] = useState<Profile[]>([])
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
   const [followed, setFollowed] = useState<Set<string>>(new Set())
+
+  const loadPostsPage = useCallback(async (targetPage: number, append: boolean) => {
+    const postsRes = await getFeed(
+      targetPage,
+      20,
+      activeCategory === 'Tudo' ? undefined : activeCategory,
+      activeFilter
+    )
+
+    const nextPosts = postsRes.data ?? []
+    setHasMore(nextPosts.length === 20)
+    setPage(targetPage)
+    setPosts((prev) => (append ? [...prev, ...nextPosts] : nextPosts))
+  }, [activeCategory, activeFilter])
 
   useEffect(() => {
     async function loadData() {
       setLoading(true)
       try {
-        const [postsRes, suggRes, eventsRes] = await Promise.all([
-          getFeed(1, 20, activeCategory === 'Tudo' ? undefined : activeCategory, activeFilter),
+        await loadPostsPage(1, false)
+        const [suggRes, eventsRes] = await Promise.all([
           getSuggestions(),
           getEvents(),
         ])
-        if (postsRes.data) setPosts(postsRes.data)
         if (suggRes.data) setSuggestions(suggRes.data.slice(0, 5))
         if (eventsRes.data) setEvents(eventsRes.data.slice(0, 3))
       } catch { /* ignore */ }
       finally { setLoading(false) }
     }
     loadData()
-  }, [activeCategory, activeFilter])
+  }, [loadPostsPage])
+
+  const handleLoadMore = useCallback(async () => {
+    if (loading || loadingMore || !hasMore) return
+    setLoadingMore(true)
+    try {
+      await loadPostsPage(page + 1, true)
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [hasMore, loadPostsPage, loading, loadingMore, page])
+
+  const sentinelRef = useInfiniteScroll({
+    enabled: true,
+    hasMore,
+    isLoading: loading || loadingMore,
+    onLoadMore: handleLoadMore,
+  })
 
   const handleFollow = async (userId: string, username: string) => {
-    const next = new Set(followed)
-    next.has(username) ? next.delete(username) : next.add(username)
-    setFollowed(next)
+    setFollowed(prev => {
+      const next = new Set(prev)
+      if (next.has(username)) {
+        next.delete(username)
+      } else {
+        next.add(username)
+      }
+      return next
+    })
     try { await followUser(userId) } catch { /* ignore */ }
   }
 
@@ -66,8 +106,6 @@ export default function ExplorarPage() {
           {/* Featured cards */}
           <div className="explorar-featured">
             {events.slice(0, 3).map(ev => {
-              const d = new Date(ev.date)
-              const label = d.toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric' }).toUpperCase()
               return (
                 <div key={ev.id} className="explorar-featured-card">
                   <div className="explorar-featured-sub" style={{ color: ev.date_color || 'var(--accent2)' }}>
@@ -162,6 +200,11 @@ export default function ExplorarPage() {
                   </div>
                 </div>
               ))}
+              {hasMore && (
+                <div ref={sentinelRef} style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
+                  {loadingMore ? <Loader2 size={20} className="spin" /> : null}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -189,7 +232,7 @@ export default function ExplorarPage() {
               ))
             : (
               <>
-                {['PortalAdmin', 'YukiSenpai', 'SakuraHime'].map((name, i) => (
+                {['PortalAdmin', 'YukiSenpai', 'SakuraHime'].map((name) => (
                   <div key={name} className="explorar-featured-user">
                     <div className="explorar-featured-user-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
                       {name.slice(0, 2).toUpperCase()}

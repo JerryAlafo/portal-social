@@ -30,20 +30,18 @@ function fmt(n: number) {
 
 interface CommentItemProps {
   comment: Comment
-  postId: string
   myId: string
   myRole: string
   onDelete: (id: string) => void
   onEdit: (id: string, content: string) => void
   onLike: (id: string) => void
   onReply: (parentId: string) => void
-  replies: Comment[]
   loadingReplies: boolean
   onLoadReplies: (commentId: string) => void
   depth?: number
 }
 
-function CommentItem({ comment, postId, myId, myRole, onDelete, onEdit, onLike, onReply, replies, loadingReplies, onLoadReplies, depth = 0 }: CommentItemProps) {
+function CommentItem({ comment, myId, myRole, onDelete, onEdit, onLike, onReply, loadingReplies, onLoadReplies, depth = 0 }: CommentItemProps) {
   const [editing, setEditing] = useState(false)
   const [editText, setEditText] = useState(comment.content)
   const [showReplies, setShowReplies] = useState(false)
@@ -56,13 +54,6 @@ function CommentItem({ comment, postId, myId, myRole, onDelete, onEdit, onLike, 
       onEdit(comment.id, editText.trim())
     }
     setEditing(false)
-  }
-
-  const handleShareComment = async () => {
-    const url = `${window.location.origin}/post/${postId}?comment=${comment.id}`
-    try {
-      await navigator.clipboard.writeText(url)
-    } catch { /* ignore */ }
   }
 
   const wasEdited =
@@ -114,10 +105,6 @@ function CommentItem({ comment, postId, myId, myRole, onDelete, onEdit, onLike, 
 
           <button className={styles.commentActionBtn} onClick={() => onReply(comment.id)}>
             <Reply size={11} />
-          </button>
-
-          <button className={styles.commentActionBtn} onClick={handleShareComment}>
-            <Share2 size={11} />
           </button>
 
           {canEdit && !editing && (
@@ -394,14 +381,12 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
             <div key={c.id}>
               <CommentItem
                 comment={c}
-                postId={post.id}
                 myId={myId}
                 myRole={myRole}
                 onDelete={handleDeleteComment}
                 onEdit={handleEditComment}
                 onLike={handleLikeComment}
                 onReply={handleReply}
-                replies={replies[c.id] || []}
                 loadingReplies={loadingReplies}
                 onLoadReplies={handleLoadReplies}
               />
@@ -409,14 +394,12 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
                 <CommentItem
                   key={r.id}
                   comment={r}
-                  postId={post.id}
                   myId={myId}
                   myRole={myRole}
                   onDelete={handleDeleteComment}
                   onEdit={handleEditComment}
                   onLike={handleLikeComment}
                   onReply={handleReply}
-                  replies={[]}
                   loadingReplies={false}
                   onLoadReplies={() => {}}
                   depth={1}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { Loader2 } from 'lucide-react'
@@ -8,31 +8,59 @@ import Topbar from '@/components/layout/Topbar'
 import { getFollowing, unfollowUser } from '@/services/following'
 import { getFeed } from '@/services/posts'
 import type { Profile, Post } from '@/types'
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll'
 
 export default function SeguindoPage() {
   const { data: session } = useSession()
   const [following, setFollowing] = useState<Profile[]>([])
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
+
+  const loadPostsPage = useCallback(async (targetPage: number, append: boolean) => {
+    const feedRes = await getFeed(targetPage, 20, undefined, 'following')
+    const nextPosts = feedRes.data ?? []
+    setHasMore(nextPosts.length === 20)
+    setPage(targetPage)
+    setPosts((prev) => (append ? [...prev, ...nextPosts] : nextPosts))
+  }, [])
 
   useEffect(() => {
     async function loadData() {
       if (!session?.user?.id) return
       setLoading(true)
       try {
-        const [followingRes, feedRes] = await Promise.all([
+        const [followingRes] = await Promise.all([
           getFollowing(),
-          getFeed(1, 20, undefined, 'following'),
         ])
         if (followingRes.data) setFollowing(followingRes.data)
-        if (feedRes.data) setPosts(feedRes.data)
+        await loadPostsPage(1, false)
       } catch { /* ignore */ }
       finally { setLoading(false) }
     }
     loadData()
-  }, [session?.user?.id])
+  }, [loadPostsPage, session?.user?.id])
 
-  const handleUnfollow = async (userId: string, username: string) => {
+  const handleLoadMore = useCallback(async () => {
+    if (loading || loadingMore || !hasMore) return
+    setLoadingMore(true)
+    try {
+      await loadPostsPage(page + 1, true)
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [hasMore, loadPostsPage, loading, loadingMore, page])
+
+  const sentinelRef = useInfiniteScroll({
+    enabled: true,
+    hasMore,
+    isLoading: loading || loadingMore,
+    onLoadMore: handleLoadMore,
+  })
+
+  const handleUnfollow = async (userId: string) => {
     try {
       await unfollowUser(userId)
       setFollowing(prev => prev.filter(f => f.id !== userId))
@@ -105,6 +133,11 @@ export default function SeguindoPage() {
                     </div>
                   </div>
                 ))}
+                {hasMore && (
+                  <div ref={sentinelRef} style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
+                    {loadingMore ? <Loader2 size={20} className="spin" /> : null}
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -126,7 +159,7 @@ export default function SeguindoPage() {
                 <span className="seguindo-follow-name">{f.display_name}</span>
                 <button
                   className="seguindo-unfollow-btn"
-                  onClick={() => handleUnfollow(f.id, f.username)}
+                  onClick={() => handleUnfollow(f.id)}
                 >
                   Deixar de seguir
                 </button>

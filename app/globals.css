@@ -463,3 +463,27 @@ button { font-family: var(--font-body); }
 /* Clickable stats */
 .perfil-stat-clickable { background: transparent; border: none; cursor: pointer; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .perfil-stat-clickable:hover .perfil-stat-num { color: var(--accent2); }
+
+/* Ensure flex children can actually scroll vertically */
+.feed-page,
+.feed-body,
+.feed-col,
+.feed-right-panel,
+.explorar-page,
+.explorar-body,
+.explorar-main-col,
+.explorar-right-panel,
+.seguindo-page,
+.seguindo-body,
+.seguindo-feed-col,
+.seguindo-right-panel,
+.pesquisar-page,
+.pesquisar-body,
+.pesquisar-main-col,
+.pesquisar-right-panel,
+.perfil-page,
+.perfil-body,
+.perfil-main-col,
+.perfil-right-col {
+  min-height: 0;
+}

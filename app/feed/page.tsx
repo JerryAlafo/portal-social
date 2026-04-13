@@ -43,6 +43,7 @@ export default function FeedPage() {
   const [events,       setEvents]       = useState<Event[]>([])
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const composeRef = useRef<HTMLDivElement>(null)
 
   const loadPage = useCallback(async (targetPage: number, append: boolean) => {
     let filter: string | undefined
@@ -138,6 +139,9 @@ export default function FeedPage() {
       if (res.data) {
         setPosts(prev => [res.data!, ...prev])
         setComposeText('')
+        if (composeRef.current) {
+          composeRef.current.textContent = ''
+        }
         setImageUrl(null)
         setImagePreview(null)
       }
@@ -186,6 +190,7 @@ export default function FeedPage() {
             <div className="feed-compose-top">
               <div className="feed-compose-avatar">{initials}</div>
               <div
+                ref={composeRef}
                 className="feed-compose-input"
                 contentEditable
                 suppressContentEditableWarning

@@ -32,7 +32,19 @@ export async function PATCH(request: Request) {
     const allowed = ['display_name', 'bio', 'location', 'website', 'avatar_url', 'cover_url']
     const updates: Record<string, unknown> = {}
     for (const key of allowed) {
-      if (key in body) updates[key] = body[key]
+      if (!(key in body)) continue
+
+      const value = body[key]
+      if (typeof value === 'string') {
+        const trimmed = value.trim()
+        if (key === 'bio' || key === 'location' || key === 'website' || key === 'cover_url') {
+          updates[key] = trimmed === '' ? null : trimmed
+        } else {
+          updates[key] = trimmed
+        }
+      } else {
+        updates[key] = value
+      }
     }
 
     if (Object.keys(updates).length === 0)

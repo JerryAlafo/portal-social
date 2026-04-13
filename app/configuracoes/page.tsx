@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useSession } from 'next-auth/react'
-import { User, Bell, Shield, Palette, Eye, Trash2, Save, ChevronRight, Loader2 } from 'lucide-react'
-import PasswordInput from '@/components/ui/PasswordInput'
+import { signOut, useSession } from 'next-auth/react'
+import { User, Save, ChevronRight, Loader2 } from 'lucide-react'
 import Topbar from '@/components/layout/Topbar'
 import { getMyProfile, updateProfile } from '@/services/profile'
 import { uploadImage } from '@/services/upload'
@@ -11,16 +10,13 @@ import styles from './page.module.css'
 
 const SECTIONS = [
   { id: 'perfil',       label: 'Perfil',        icon: User    },
-  { id: 'notificacoes', label: 'Notificacoes',   icon: Bell    },
-  { id: 'privacidade',  label: 'Privacidade',    icon: Shield  },
-  { id: 'aparencia',    label: 'Aparencia',      icon: Palette },
-  { id: 'conta',        label: 'Conta',          icon: Eye     },
 ]
 
 export default function ConfigPage() {
   const { data: session } = useSession()
   const [active,  setActive]  = useState('perfil')
   const [saving,  setSaving]  = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [saved,   setSaved]   = useState(false)
   const [error,   setError]   = useState<string | null>(null)
 
@@ -32,20 +28,6 @@ export default function ConfigPage() {
     website: '',
     avatar_url: null as string | null,
     avatar_initials: '',
-  })
-
-  const [notifs, setNotifs] = useState({
-    likes: true, comments: true, follows: true, mentions: true, events: false, newsletter: false,
-  })
-  const [privacy, setPrivacy] = useState({
-    publicProfile: true, showFollowers: true, allowMessages: 'all', showOnline: true,
-  })
-  const [appearance, setAppearance] = useState({
-    theme: 'dark', fontSize: 'medium', compactMode: false, animations: true,
-  })
-  const [security, setSecurity] = useState({
-    currentPassword: '',
-    newPassword: '',
   })
 
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
@@ -98,19 +80,57 @@ export default function ConfigPage() {
     setSaving(true)
     try {
       const res = await updateProfile({
-        display_name: profile.display_name,
-        bio:          profile.bio || undefined,
-        location:     profile.location || undefined,
-        website:      profile.website || undefined,
+        display_name: profile.display_name.trim(),
+        bio:          profile.bio,
+        location:     profile.location,
+        website:      profile.website,
         avatar_url:   profile.avatar_url ?? undefined,
       })
       if (res.error) throw new Error(res.error)
+      if (res.data) {
+        setProfile(p => ({
+          ...p,
+          display_name: res.data?.display_name ?? p.display_name,
+          bio: res.data?.bio ?? '',
+          location: res.data?.location ?? '',
+          website: res.data?.website ?? '',
+          avatar_url: res.data?.avatar_url ?? p.avatar_url,
+          avatar_initials: res.data?.avatar_initials ?? p.avatar_initials,
+        }))
+      }
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erro ao guardar. Tente novamente.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    if (deleting) return
+
+    const confirmed = window.confirm(
+      'Tens a certeza que queres eliminar a tua conta permanentemente? Esta ação não pode ser desfeita.'
+    )
+
+    if (!confirmed) return
+
+    setError(null)
+    setDeleting(true)
+
+    try {
+      const response = await fetch('/api/account', { method: 'DELETE' })
+      const json = await response.json()
+
+      if (!response.ok) {
+        throw new Error(json.error || 'Não foi possível eliminar a conta.')
+      }
+
+      await signOut({ callbackUrl: '/login' })
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Erro ao eliminar conta.')
+      setDeleting(false)
     }
   }
 
@@ -136,11 +156,6 @@ export default function ConfigPage() {
               <ChevronRight size={14} className={styles.navChevron} />
             </button>
           ))}
-          <div className={styles.navDivider} />
-          <button className={styles.navItem} style={{ color: 'var(--red)' }}>
-            <Trash2 size={16} />
-            Eliminar conta
-          </button>
         </nav>
 
         {/* Content */}
@@ -233,179 +248,23 @@ export default function ConfigPage() {
                   />
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* ── Notificacoes ───────────────────────────── */}
-          {active === 'notificacoes' && (
-            <div className={styles.section}>
-              <h2 className={styles.sectionTitle}>Notificacoes</h2>
-              <p className={styles.sectionSub}>Escolhe quando e como queres ser notificado</p>
-              <div className={styles.toggleList}>
-                {([
-                  { key: 'likes',      label: 'Gostos nas publicacoes', sub: 'Quando alguem gostar de uma publicacao tua' },
-                  { key: 'comments',   label: 'Comentarios',            sub: 'Quando alguem comentar nas tuas publicacoes' },
-                  { key: 'follows',    label: 'Novos seguidores',       sub: 'Quando alguem te comecar a seguir' },
-                  { key: 'mentions',   label: 'Mencoes',                sub: 'Quando fores mencionado numa publicacao' },
-                  { key: 'events',     label: 'Eventos',                sub: 'Actualizacoes sobre eventos que marcaste interesse' },
-                  { key: 'newsletter', label: 'Newsletter PORTAL',      sub: 'Resumo semanal de novidades da comunidade' },
-                ] as const).map(item => (
-                  <div key={item.key} className={styles.toggleItem}>
-                    <div>
-                      <div className={styles.toggleLabel}>{item.label}</div>
-                      <div className={styles.toggleSub}>{item.sub}</div>
-                    </div>
-                    <button
-                      className={`${styles.toggle} ${notifs[item.key] ? styles.toggleOn : ''}`}
-                      onClick={() => setNotifs(n => ({ ...n, [item.key]: !n[item.key] }))}
-                    >
-                      <span className={styles.toggleThumb} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ── Privacidade ────────────────────────────── */}
-          {active === 'privacidade' && (
-            <div className={styles.section}>
-              <h2 className={styles.sectionTitle}>Privacidade</h2>
-              <p className={styles.sectionSub}>Controla quem pode ver o teu conteudo</p>
-              <div className={styles.toggleList}>
-                {([
-                  { key: 'publicProfile', label: 'Perfil publico',         sub: 'Qualquer pessoa pode ver o teu perfil' },
-                  { key: 'showFollowers', label: 'Mostrar seguidores',      sub: 'Outros membros podem ver quem te segue' },
-                  { key: 'showOnline',    label: 'Mostrar estado online',   sub: 'Outros membros podem ver quando estas online' },
-                ] as const).map(item => (
-                  <div key={item.key} className={styles.toggleItem}>
-                    <div>
-                      <div className={styles.toggleLabel}>{item.label}</div>
-                      <div className={styles.toggleSub}>{item.sub}</div>
-                    </div>
-                    <button
-                      className={`${styles.toggle} ${privacy[item.key] ? styles.toggleOn : ''}`}
-                      onClick={() => setPrivacy(p => ({ ...p, [item.key]: !p[item.key] }))}
-                    >
-                      <span className={styles.toggleThumb} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <div className={styles.field} style={{ marginTop: 20 }}>
-                <label className={styles.label}>Quem pode enviar mensagens</label>
-                <select
-                  className={styles.select}
-                  value={privacy.allowMessages}
-                  onChange={e => setPrivacy(p => ({ ...p, allowMessages: e.target.value }))}
+              <div style={{ marginTop: 24, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                <p className={styles.sectionSub} style={{ marginBottom: 10, color: 'var(--red)' }}>
+                  Zona de perigo
+                </p>
+                <button
+                  className={styles.saveBtn}
+                  onClick={handleDeleteAccount}
+                  disabled={saving || uploadingAvatar || deleting}
+                  style={{
+                    background: 'rgba(252, 92, 125, 0.12)',
+                    border: '1px solid rgba(252, 92, 125, 0.35)',
+                    color: '#f87171',
+                  }}
                 >
-                  <option value="all">Todos os membros</option>
-                  <option value="followers">Apenas seguidores</option>
-                  <option value="none">Ninguem</option>
-                </select>
-              </div>
-            </div>
-          )}
-
-          {/* ── Aparencia ──────────────────────────────── */}
-          {active === 'aparencia' && (
-            <div className={styles.section}>
-              <h2 className={styles.sectionTitle}>Aparencia</h2>
-              <p className={styles.sectionSub}>Personaliza o aspecto visual do PORTAL</p>
-              <div className={styles.field}>
-                <label className={styles.label}>Tema</label>
-                <div className={styles.themeOptions}>
-                  {(['dark', 'light'] as const).map(t => (
-                    <button
-                      key={t}
-                      className={`${styles.themeOption} ${appearance.theme === t ? styles.themeActive : ''}`}
-                      onClick={() => setAppearance(a => ({ ...a, theme: t }))}
-                    >
-                      <div className={`${styles.themePreview} ${styles[`preview_${t}`]}`} />
-                      {t === 'dark' ? 'Escuro' : 'Claro'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label}>Tamanho do texto</label>
-                <div className={styles.sizeOptions}>
-                  {(['small', 'medium', 'large'] as const).map(s => (
-                    <button
-                      key={s}
-                      className={`${styles.sizeBtn} ${appearance.fontSize === s ? styles.sizeActive : ''}`}
-                      onClick={() => setAppearance(a => ({ ...a, fontSize: s }))}
-                    >
-                      {s === 'small' ? 'Pequeno' : s === 'medium' ? 'Normal' : 'Grande'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className={styles.toggleList}>
-                {([
-                  { key: 'compactMode', label: 'Modo compacto', sub: 'Reduz o espacamento entre elementos' },
-                  { key: 'animations',  label: 'Animacoes',     sub: 'Activa transicoes e efeitos visuais' },
-                ] as const).map(item => (
-                  <div key={item.key} className={styles.toggleItem}>
-                    <div>
-                      <div className={styles.toggleLabel}>{item.label}</div>
-                      <div className={styles.toggleSub}>{item.sub}</div>
-                    </div>
-                    <button
-                      className={`${styles.toggle} ${appearance[item.key] ? styles.toggleOn : ''}`}
-                      onClick={() => setAppearance(a => ({ ...a, [item.key]: !a[item.key] }))}
-                    >
-                      <span className={styles.toggleThumb} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ── Conta ──────────────────────────────────── */}
-          {active === 'conta' && (
-            <div className={styles.section}>
-              <h2 className={styles.sectionTitle}>Conta</h2>
-              <p className={styles.sectionSub}>Gerir credenciais e seguranca</p>
-              <div className={styles.field}>
-                <label className={styles.label}>Email</label>
-                <input className={styles.input} type="email" defaultValue={session?.user?.email ?? ''} readOnly style={{ opacity: 0.6, cursor: 'not-allowed' }} />
-              </div>
-              <div className={styles.fieldRow}>
-                <div className={styles.field}>
-                  <label className={styles.label}>Password actual</label>
-                  <PasswordInput
-                    value={security.currentPassword}
-                    onChange={(v) => setSecurity(s => ({ ...s, currentPassword: v }))}
-                    inputClassName={styles.input}
-                  />
-                </div>
-                <div className={styles.field}>
-                  <label className={styles.label}>Nova password</label>
-                  <PasswordInput
-                    value={security.newPassword}
-                    onChange={(v) => setSecurity(s => ({ ...s, newPassword: v }))}
-                    inputClassName={styles.input}
-                  />
-                </div>
-              </div>
-              <div className={styles.dangerZone}>
-                <h3 className={styles.dangerTitle}>Zona de perigo</h3>
-                <div className={styles.dangerItem}>
-                  <div>
-                    <div className={styles.dangerLabel}>Desactivar conta temporariamente</div>
-                    <div className={styles.dangerSub}>O teu perfil ficara oculto ate reactivares</div>
-                  </div>
-                  <button className={styles.dangerBtn}>Desactivar</button>
-                </div>
-                <div className={styles.dangerItem}>
-                  <div>
-                    <div className={styles.dangerLabel}>Eliminar conta permanentemente</div>
-                    <div className={styles.dangerSub}>Esta accao e irreversivel. Todos os dados serao apagados.</div>
-                  </div>
-                  <button className={`${styles.dangerBtn} ${styles.dangerBtnRed}`}>Eliminar</button>
-                </div>
+                  {deleting ? <><Loader2 size={14} className="spin" /> A eliminar conta...</> : 'Eliminar conta permanentemente'}
+                </button>
               </div>
             </div>
           )}
@@ -422,7 +281,7 @@ export default function ConfigPage() {
                 ? <><Loader2 size={14} className="spin" /> A guardar...</>
                 : saved
                   ? <><span className={styles.checkmark}>✓</span> Guardado</>
-                  : <><Save size={14} /> Guardar alteracoes</>
+                  : <><Save size={14} /> Guardar perfil</>
               }
             </button>
           </div>
