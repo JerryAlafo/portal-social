@@ -63,10 +63,18 @@ function loadTurnstileScript(): Promise<void> {
 }
 
 export default function Turnstile({ siteKey, onVerify, onError, onExpire, theme = 'auto', size = 'normal', className }: TurnstileProps) {
+  const hostRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const widgetIdRef = useRef<string | null>(null)
   const [isReady, setIsReady] = useState(false)
+  const [scaleX, setScaleX] = useState(1)
+  const [scaleY, setScaleY] = useState(1)
   const normalizedSiteKey = siteKey.trim()
+  const BASE_WIDTH = 300
+  const BASE_HEIGHT = 65
+  const MOBILE_BREAKPOINT = 768
+  const DESKTOP_MAX_SCALE_X = 1.45
+  const DESKTOP_MAX_SCALE_Y = 1.15
 
   const onVerifyRef = useRef(onVerify)
   const onErrorRef = useRef(onError)
@@ -105,7 +113,7 @@ export default function Turnstile({ siteKey, onVerify, onError, onExpire, theme 
       'error-callback': () => onErrorRef.current?.(),
       'expired-callback': () => onExpireRef.current?.(),
       theme,
-      size,
+      size: 'normal',
     })
 
     widgetIdRef.current = widgetId
@@ -123,6 +131,35 @@ export default function Turnstile({ siteKey, onVerify, onError, onExpire, theme 
   }, [isReady, normalizedSiteKey, theme, size])
 
   useEffect(() => {
+    const recalculateScale = () => {
+      const host = hostRef.current
+      if (!host) return
+
+      const availableWidth = host.clientWidth
+      if (!availableWidth) return
+
+      const isMobile = window.innerWidth <= MOBILE_BREAKPOINT
+      const calculatedScaleX = Math.max(
+        0.6,
+        Math.min(availableWidth / BASE_WIDTH, isMobile ? 1 : DESKTOP_MAX_SCALE_X)
+      )
+      const calculatedScaleY = isMobile
+        ? calculatedScaleX
+        : Math.min(calculatedScaleX, DESKTOP_MAX_SCALE_Y)
+
+      setScaleX(calculatedScaleX)
+      setScaleY(calculatedScaleY)
+    }
+
+    recalculateScale()
+    window.addEventListener('resize', recalculateScale)
+
+    return () => {
+      window.removeEventListener('resize', recalculateScale)
+    }
+  }, [])
+
+  useEffect(() => {
     if (!normalizedSiteKey) {
       onErrorRef.current?.()
     }
@@ -131,7 +168,24 @@ export default function Turnstile({ siteKey, onVerify, onError, onExpire, theme 
   return (
     <div className={`login-turnstile${className ? ` ${className}` : ''}`} style={{ margin: '0.5rem 0 0.75rem' }}>
       {normalizedSiteKey ? (
-        <div ref={containerRef} />
+        <div
+          ref={hostRef}
+          style={{
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            minHeight: `${Math.ceil(BASE_HEIGHT * scaleY)}px`,
+          }}
+        >
+          <div
+            ref={containerRef}
+            style={{
+              width: `${BASE_WIDTH}px`,
+              transform: `scale(${scaleX}, ${scaleY})`,
+              transformOrigin: 'top center',
+            }}
+          />
+        </div>
       ) : (
         <p className="login-error">Turnstile não configurado. Define NEXT_PUBLIC_TURNSTILE_SITE_KEY.</p>
       )}

@@ -1,6 +1,7 @@
 import CredentialsProvider from 'next-auth/providers/credentials'
 import type { NextAuthConfig } from 'next-auth'
 import { createServerClient } from '@/lib/supabase-server'
+import { verifyTurnstileToken } from '@/lib/turnstile'
 
 const supabase = createServerClient()
 
@@ -16,15 +17,23 @@ export const authOptions: NextAuthConfig = {
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
+        turnstileToken: { label: 'Turnstile Token', type: 'text' },
       },
       async authorize(credentials) {
         if (
           !credentials ||
           typeof credentials.email !== 'string' ||
           typeof credentials.password !== 'string' ||
+          typeof credentials.turnstileToken !== 'string' ||
           !credentials.email ||
-          !credentials.password
+          !credentials.password ||
+          !credentials.turnstileToken
         ) {
+          return null
+        }
+
+        const isTurnstileValid = await verifyTurnstileToken(credentials.turnstileToken)
+        if (!isTurnstileValid) {
           return null
         }
 

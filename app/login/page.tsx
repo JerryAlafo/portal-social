@@ -51,6 +51,7 @@ export default function LoginPage() {
           password: values.password,
           username: values.username.trim(),
           display_name: values.displayName.trim(),
+          turnstileToken,
         }),
       })
 
@@ -68,6 +69,7 @@ export default function LoginPage() {
           redirect: false,
           email: values.email,
           password: values.password,
+          turnstileToken,
         })
       } catch {
         setError('Erro ao autenticar após registo.')
@@ -91,6 +93,7 @@ export default function LoginPage() {
         redirect: false,
         email: values.email,
         password: values.password,
+        turnstileToken,
       })
     } catch {
       setError('Credenciais inválidas.')
@@ -228,7 +231,7 @@ export default function LoginPage() {
               onVerify={setTurnstileToken}
               onExpire={() => setTurnstileToken('')}
               theme="auto"
-              size="flexible"
+              size="normal"
             />
 
             <button type="submit" className="login-submit" disabled={loading || !turnstileToken}>
