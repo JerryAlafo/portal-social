@@ -66,6 +66,7 @@ export default function Turnstile({ siteKey, onVerify, onError, onExpire, theme 
   const containerRef = useRef<HTMLDivElement>(null)
   const widgetIdRef = useRef<string | null>(null)
   const [isReady, setIsReady] = useState(false)
+  const normalizedSiteKey = siteKey.trim()
 
   const onVerifyRef = useRef(onVerify)
   const onErrorRef = useRef(onError)
@@ -78,6 +79,8 @@ export default function Turnstile({ siteKey, onVerify, onError, onExpire, theme 
   }, [onVerify, onError, onExpire])
 
   useEffect(() => {
+    if (!normalizedSiteKey) return
+
     let mounted = true
 
     loadTurnstileScript().then(() => {
@@ -89,15 +92,15 @@ export default function Turnstile({ siteKey, onVerify, onError, onExpire, theme 
     return () => {
       mounted = false
     }
-  }, [])
+  }, [normalizedSiteKey])
 
   useEffect(() => {
-    if (!isReady || !containerRef.current || !window.turnstile) return
+    if (!normalizedSiteKey || !isReady || !containerRef.current || !window.turnstile) return
     if (!containerRef.current.isConnected) return
 
     const container = containerRef.current
     const widgetId = window.turnstile.render(container, {
-      sitekey: siteKey,
+      sitekey: normalizedSiteKey,
       callback: (token) => onVerifyRef.current(token),
       'error-callback': () => onErrorRef.current?.(),
       'expired-callback': () => onExpireRef.current?.(),
@@ -117,11 +120,21 @@ export default function Turnstile({ siteKey, onVerify, onError, onExpire, theme 
       }
       widgetIdRef.current = null
     }
-  }, [isReady, siteKey, theme, size])
+  }, [isReady, normalizedSiteKey, theme, size])
+
+  useEffect(() => {
+    if (!normalizedSiteKey) {
+      onErrorRef.current?.()
+    }
+  }, [normalizedSiteKey])
 
   return (
     <div className={`login-turnstile${className ? ` ${className}` : ''}`} style={{ margin: '0.5rem 0 0.75rem' }}>
-      <div ref={containerRef} />
+      {normalizedSiteKey ? (
+        <div ref={containerRef} />
+      ) : (
+        <p className="login-error">Turnstile não configurado. Define NEXT_PUBLIC_TURNSTILE_SITE_KEY.</p>
+      )}
     </div>
   )
 }
