@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { ThemeProvider } from '@/lib/theme-context'
 import PasswordInput from '@/components/ui/PasswordInput'
+import Turnstile from '@/components/ui/Turnstile'
 
 export default function LoginPage() {
   const router = useRouter()
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState<string>('')
   const [values, setValues] = useState({
     email: '',
     password: '',
@@ -27,6 +29,12 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
+
+    if (!turnstileToken) {
+      setError('Por favor, verifica que não és um robô.')
+      setLoading(false)
+      return
+    }
 
     if (mode === 'register') {
       if (values.password !== values.confirmPassword) {
@@ -215,7 +223,14 @@ export default function LoginPage() {
 
             {error && <p className="login-error">{error}</p>}
 
-            <button type="submit" className="login-submit" disabled={loading}>
+            <Turnstile
+              siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''}
+              onVerify={setTurnstileToken}
+              onExpire={() => setTurnstileToken('')}
+              theme="auto"
+            />
+
+            <button type="submit" className="login-submit" disabled={loading || !turnstileToken}>
               {loading ? (
                 <span className="login-spinner" />
               ) : mode === 'login' ? (
