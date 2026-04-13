@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Search, Bell, Sun, Moon, X, Menu } from 'lucide-react'
@@ -23,7 +23,7 @@ export default function Topbar({ title }: TopbarProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [hasUnread, setHasUnread] = useState(false)
-  const nowRef = useRef(Date.now())
+  const [now, setNow] = useState(() => Date.now())
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,6 +35,8 @@ export default function Topbar({ title }: TopbarProps) {
   }
 
   useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60_000)
+
     getNotifications()
       .then(res => {
         if (res.data) {
@@ -43,6 +45,7 @@ export default function Topbar({ title }: TopbarProps) {
         }
       })
       .catch(() => {}) // fail silently — user still sees UI
+    return () => clearInterval(timer)
   }, [])
 
   const openNotifs = () => {
@@ -61,11 +64,22 @@ export default function Topbar({ title }: TopbarProps) {
       case 'comment': return `${actorName} comentou a tua publicação`
       case 'follow':  return `${actorName} passou a seguir-te`
       case 'share':   return `${actorName} partilhou a tua publicação`
+      case 'mention': return `${actorName} enviou uma atualização para ti`
     }
   }
 
+  const notificationHref = (notification: Notification) => {
+    if (notification.type === 'follow') {
+      return `/perfil/${notification.actor.username}`
+    }
+    if (notification.post_id) {
+      return `/post/${notification.post_id}`
+    }
+    return '/mensagens'
+  }
+
   const timeAgo = (dateStr: string) => {
-    const diff = nowRef.current - new Date(dateStr).getTime()
+    const diff = now - new Date(dateStr).getTime()
     const mins = Math.floor(diff / 60000)
     if (mins < 1)  return 'Agora mesmo'
     if (mins < 60) return `${mins} min`
@@ -133,7 +147,7 @@ export default function Topbar({ title }: TopbarProps) {
           {notifications.map(n => (
             <div key={n.id} className={`${styles.notifItem} ${!n.is_read ? styles.unread : ''}`}>
               <Link
-                href={`/perfil/${n.actor.username}`}
+                href={notificationHref(n)}
                 className={styles.notifAvatar}
                 style={{ background: 'var(--bg4)', color: 'var(--accent2)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
               >
@@ -141,7 +155,7 @@ export default function Topbar({ title }: TopbarProps) {
               </Link>
               <div className={styles.notifContent}>
                 <p className={styles.notifText}>
-                  <Link href={`/perfil/${n.actor.username}`} style={{ textDecoration: 'none', color: 'inherit', fontWeight: n.is_read ? 400 : 600 }}>
+                  <Link href={notificationHref(n)} style={{ textDecoration: 'none', color: 'inherit', fontWeight: n.is_read ? 400 : 600 }}>
                     {typeLabel(n.type, n.actor.display_name)}
                   </Link>
                 </p>

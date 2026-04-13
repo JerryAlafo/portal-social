@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { MapPin, Link2, Calendar, MoreHorizontal, Share2, Edit3, Loader2 } from 'lucide-react'
 import Topbar from '@/components/layout/Topbar'
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll'
 
 const TABS = ['Publicacoes', 'Galeria', 'Gostos', 'Fanfics']
 
@@ -101,6 +102,9 @@ export default function PerfilPage() {
   const [posts, setPosts] = useState<Post[]>([])
   const [fanfics, setFanfics] = useState<Fanfic[]>([])
   const [gallery, setGallery] = useState<GalleryItem[]>([])
+  const [tabPage, setTabPage] = useState(1)
+  const [tabHasMore, setTabHasMore] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
 
   const userId = session?.user?.id
 
@@ -124,29 +128,64 @@ export default function PerfilPage() {
     loadProfile()
   }, [userId])
 
-  useEffect(() => {
-    async function loadTabData() {
-      if (!userId || !profile) return
-      try {
-        if (activeTab === 'Publicacoes') {
-          const res = await fetch(`/api/users/${userId}/profile?tab=posts&limit=20`)
-          const json = await res.json()
-          setPosts(json.data || [])
-        } else if (activeTab === 'Fanfics') {
-          const res = await fetch(`/api/users/${userId}/profile?tab=fanfics&limit=20`)
-          const json = await res.json()
-          setFanfics(json.data || [])
-        } else if (activeTab === 'Galeria') {
-          const res = await fetch(`/api/users/${userId}/profile?tab=gallery&limit=20`)
-          const json = await res.json()
-          setGallery(json.data || [])
-        }
-      } catch (e) {
-        console.error(e)
+  const loadTabData = useCallback(async (page: number, append: boolean) => {
+    if (!userId || !profile) return
+    try {
+      const tabMap: Record<string, string> = {
+        Publicacoes: 'posts',
+        Fanfics: 'fanfics',
+        Galeria: 'gallery',
       }
+      const tab = tabMap[activeTab]
+      if (!tab) {
+        setTabHasMore(false)
+        return
+      }
+
+      const res = await fetch(`/api/users/${userId}/profile?tab=${tab}&page=${page}&limit=20`)
+      const json = await res.json()
+      const next = json.data || []
+
+      setTabPage(page)
+      setTabHasMore(Boolean(json.hasMore))
+
+      if (activeTab === 'Publicacoes') {
+        setPosts((prev) => (append ? [...prev, ...next] : next))
+      } else if (activeTab === 'Fanfics') {
+        setFanfics((prev) => (append ? [...prev, ...next] : next))
+      } else if (activeTab === 'Galeria') {
+        setGallery((prev) => (append ? [...prev, ...next] : next))
+      }
+    } catch (e) {
+      console.error(e)
     }
-    loadTabData()
-  }, [activeTab, userId, profile])
+  }, [activeTab, profile, userId])
+
+  useEffect(() => {
+    setTabPage(1)
+    setTabHasMore(true)
+    setPosts([])
+    setFanfics([])
+    setGallery([])
+    void loadTabData(1, false)
+  }, [activeTab, loadTabData])
+
+  const handleLoadMore = useCallback(async () => {
+    if (loadingMore || !tabHasMore || loading) return
+    setLoadingMore(true)
+    try {
+      await loadTabData(tabPage + 1, true)
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [loadTabData, loading, loadingMore, tabHasMore, tabPage])
+
+  const sentinelRef = useInfiniteScroll({
+    enabled: activeTab !== 'Gostos',
+    hasMore: tabHasMore,
+    isLoading: loading || loadingMore,
+    onLoadMore: handleLoadMore,
+  })
 
   if (!session) {
     return (
@@ -298,6 +337,11 @@ export default function PerfilPage() {
                   </div>
                 ))
               )}
+              {tabHasMore && (
+                <div ref={sentinelRef} className="feed-loading-state">
+                  {loadingMore ? <Loader2 size={18} className="spin" /> : null}
+                </div>
+              )}
             </div>
           )}
 
@@ -311,6 +355,11 @@ export default function PerfilPage() {
                     <img src={item.image_url} alt={item.title || 'Imagem'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                 ))
+              )}
+              {tabHasMore && (
+                <div ref={sentinelRef} className="feed-loading-state">
+                  {loadingMore ? <Loader2 size={18} className="spin" /> : null}
+                </div>
               )}
             </div>
           )}
@@ -332,6 +381,11 @@ export default function PerfilPage() {
                     </div>
                   </div>
                 ))
+              )}
+              {tabHasMore && (
+                <div ref={sentinelRef} className="feed-loading-state">
+                  {loadingMore ? <Loader2 size={18} className="spin" /> : null}
+                </div>
               )}
             </div>
           )}

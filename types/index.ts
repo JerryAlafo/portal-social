@@ -67,7 +67,7 @@ export interface Notification {
   id: string
   user_id: string
   actor_id: string
-  type: 'like' | 'comment' | 'follow' | 'share'
+  type: 'like' | 'comment' | 'follow' | 'share' | 'mention'
   post_id: string | null
   is_read: boolean
   created_at: string

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { createServerClient } from '@/lib/supabase-server'
+import { hitRateLimit } from '@/lib/rate-limit'
 
 export async function GET(request: Request, props: { params: Promise<{ id: string }> }) {
   try {
@@ -46,6 +47,12 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     const { content } = await request.json()
 
     if (!content?.trim()) return NextResponse.json({ error: 'Mensagem vazia.' }, { status: 400 })
+    if (hitRateLimit(`message:${session.user.id}`, 20, 60_000)) {
+      return NextResponse.json(
+        { error: 'Estás a enviar mensagens demasiado rápido. Tenta novamente em instantes.' },
+        { status: 429 }
+      )
+    }
 
     const supabase = createServerClient()
 
@@ -78,8 +85,8 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
       const notifications = participants.map(p => ({
         user_id: p.user_id,
         actor_id: session.user.id,
-        type: 'message',
-        reference_id: conversation_id,
+        type: 'mention',
+        post_id: null,
       }))
       await supabase.from('notifications').insert(notifications)
     }

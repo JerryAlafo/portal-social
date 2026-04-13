@@ -39,7 +39,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
           user_id: post.author_id,
           actor_id: session.user.id,
           type: 'like',
-          reference_id: post_id,
+          post_id,
         })
       }
 

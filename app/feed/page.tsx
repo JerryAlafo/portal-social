@@ -12,6 +12,7 @@ import { getEvents } from '@/services/events'
 import { followUser } from '@/services/following'
 import { uploadImage } from '@/services/upload'
 import type { Post, TrendingTag, Profile, Event } from '@/types'
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll'
 
 const CATEGORIES = ['Tudo', 'Shonen', 'Shojo', 'Isekai', 'Seinen', 'Cosplay', 'Manga', 'Figura', 'AMV']
 const TABS = ['Geral', 'A seguir', 'Noticias', 'Anuncios']
@@ -27,6 +28,9 @@ export default function FeedPage() {
   const [activeTab,      setActiveTab]      = useState('Geral')
   const [posts,          setPosts]          = useState<Post[]>([])
   const [loading,        setLoading]        = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
   const [composeText,    setComposeText]    = useState('')
   const [publishing,     setPublishing]     = useState(false)
   const [imageUrl,       setImageUrl]       = useState<string | null>(null)
@@ -40,30 +44,53 @@ export default function FeedPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const loadPage = useCallback(async (targetPage: number, append: boolean) => {
+    let filter: string | undefined
+    let category: string | undefined
+
+    if (activeTab === 'A seguir') {
+      filter = 'following'
+    } else if (activeTab === 'Noticias') {
+      category = 'Noticias'
+    } else if (activeTab === 'Anuncios') {
+      category = 'Anuncios'
+    } else {
+      category = activeCategory !== 'Tudo' ? activeCategory : undefined
+    }
+
+    const res = await getFeed(targetPage, 20, category, filter)
+    const nextPosts = res.data ?? []
+    setHasMore(nextPosts.length === 20)
+    setPage(targetPage)
+    setPosts((prev) => (append ? [...prev, ...nextPosts] : nextPosts))
+  }, [activeCategory, activeTab])
+
   const loadFeed = useCallback(async () => {
     setLoading(true)
     try {
-      let filter: string | undefined
-      let category: string | undefined
-      
-      if (activeTab === 'A seguir') {
-        filter = 'following'
-      } else if (activeTab === 'Noticias') {
-        category = 'Noticias'
-      } else if (activeTab === 'Anuncios') {
-        category = 'Anuncios'
-      } else {
-        // Geral - use category filter
-        category = activeCategory !== 'Tudo' ? activeCategory : undefined
-      }
-      
-      const res = await getFeed(1, 20, category, filter)
-      if (res.data) setPosts(res.data)
+      await loadPage(1, false)
     } catch { /* keep previous */ }
     finally { setLoading(false) }
-  }, [activeCategory, activeTab])
+  }, [loadPage])
 
   useEffect(() => { loadFeed() }, [loadFeed])
+
+  const handleLoadMore = useCallback(async () => {
+    if (loading || loadingMore || !hasMore) return
+    setLoadingMore(true)
+    try {
+      await loadPage(page + 1, true)
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [hasMore, loadPage, loading, loadingMore, page])
+
+  const sentinelRef = useInfiniteScroll({
+    enabled: true,
+    hasMore,
+    isLoading: loading || loadingMore,
+    onLoadMore: handleLoadMore,
+  })
 
   useEffect(() => {
     Promise.all([
@@ -134,12 +161,17 @@ export default function FeedPage() {
   const handleFollow = async (userId: string, username: string) => {
     setFollowed(prev => {
       const next = new Set(prev)
-      next.has(username) ? next.delete(username) : next.add(username)
+      if (next.has(username)) {
+        next.delete(username)
+      } else {
+        next.add(username)
+      }
       return next
     })
     try { await followUser(userId) } catch { /* ignore */ }
   }
 
+  const sessionRole = (session?.user as { role?: string } | undefined)?.role
   const initials   = session?.user?.avatar_initials || session?.user?.name?.slice(0, 2).toUpperCase() || '??'
   const firstName  = session?.user?.name?.split(' ')[0] || 'utilizador'
 
@@ -216,11 +248,16 @@ export default function FeedPage() {
                 <div key={post.id} className={`animate-fade-in-up animate-delay-${Math.min(i + 1, 4)}`}>
                   <PostCard
                     post={post}
-                    onDelete={session?.user?.id === post.author_id || (session?.user as any)?.role === 'mod' || (session?.user as any)?.role === 'superuser' ? handleDelete : undefined}
+                    onDelete={session?.user?.id === post.author_id || sessionRole === 'mod' || sessionRole === 'superuser' ? handleDelete : undefined}
                     onLike={handleLike}
                   />
                 </div>
               ))}
+              {hasMore && (
+                <div ref={sentinelRef} className="feed-loading-state">
+                  {loadingMore ? <Loader size={20} className="spin" /> : null}
+                </div>
+              )}
             </div>
           )}
         </div>

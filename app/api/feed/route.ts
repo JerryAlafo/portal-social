@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { createServerClient } from '@/lib/supabase-server'
+import { hitRateLimit } from '@/lib/rate-limit'
 
 export async function GET(request: Request) {
   try {
@@ -79,6 +80,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'O conteúdo não pode estar vazio.' }, { status: 400 })
     }
 
+    const isFlooding = hitRateLimit(`post:${session.user.id}`, 6, 60_000)
+    if (isFlooding) {
+      return NextResponse.json(
+        { error: 'Estás a publicar demasiado rápido. Tenta novamente em instantes.' },
+        { status: 429 }
+      )
+    }
+
     const supabase = createServerClient()
 
     const { data: post, error } = await supabase
@@ -88,6 +97,23 @@ export async function POST(request: Request) {
       .single()
 
     if (error) throw error
+
+    const { data: followers } = await supabase
+      .from('follows')
+      .select('follower_id')
+      .eq('following_id', session.user.id)
+
+    const followerIds = followers?.map((item) => item.follower_id) ?? []
+    if (followerIds.length > 0) {
+      await supabase.from('notifications').insert(
+        followerIds.map((followerId) => ({
+          user_id: followerId,
+          actor_id: session.user.id,
+          type: 'mention',
+          post_id: post.id,
+        }))
+      )
+    }
 
     return NextResponse.json({ data: { ...post, liked_by_me: false }, error: null }, { status: 201 })
   } catch {

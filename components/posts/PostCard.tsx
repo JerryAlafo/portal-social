@@ -59,11 +59,15 @@ function CommentItem({ comment, postId, myId, myRole, onDelete, onEdit, onLike, 
   }
 
   const handleShareComment = async () => {
-    const url = `${window.location.origin}/feed?post=${postId}&comment=${comment.id}`
+    const url = `${window.location.origin}/post/${postId}?comment=${comment.id}`
     try {
       await navigator.clipboard.writeText(url)
     } catch { /* ignore */ }
   }
+
+  const wasEdited =
+    Boolean(comment.updated_at) &&
+    new Date(comment.updated_at as string).getTime() - new Date(comment.created_at).getTime() > 1000
 
   return (
     <div className={styles.commentItem} style={{ marginLeft: depth > 0 ? 24 : 0 }}>
@@ -77,7 +81,7 @@ function CommentItem({ comment, postId, myId, myRole, onDelete, onEdit, onLike, 
           <Link href={`/perfil/${comment.author.username}`} className={styles.commentAuthor} style={{ textDecoration: 'none', color: 'inherit' }}>{comment.author.display_name}</Link>
           <Link href={`/perfil/${comment.author.username}`} className={styles.commentHandle} style={{ textDecoration: 'none' }}>@{comment.author.username}</Link>
           <span className={styles.commentTime}>{timeAgo(comment.created_at)}</span>
-          {comment.updated_at && <span className={styles.commentEdited}>(editado)</span>}
+          {wasEdited && <span className={styles.commentEdited}>(editado)</span>}
         </div>
 
         {editing ? (
@@ -267,7 +271,7 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
 
   const handleShare = async () => {
     setMenuOpen(false)
-    const url = `${window.location.origin}/feed?post=${post.id}`
+    const url = `${window.location.origin}/post/${post.id}`
 
     if (navigator.share) {
       try {

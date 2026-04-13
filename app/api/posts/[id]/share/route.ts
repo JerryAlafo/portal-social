@@ -13,6 +13,21 @@ export async function POST(_req: Request, props: { params: Promise<{ id: string 
     const { error } = await supabase.rpc('increment_shares', { post_id: id })
     if (error) throw error
 
+    const { data: post } = await supabase
+      .from('posts')
+      .select('author_id')
+      .eq('id', id)
+      .single()
+
+    if (post && post.author_id !== session.user.id) {
+      await supabase.from('notifications').insert({
+        user_id: post.author_id,
+        actor_id: session.user.id,
+        type: 'share',
+        post_id: id,
+      })
+    }
+
     return NextResponse.json({ data: { shared: true }, error: null })
   } catch {
     return NextResponse.json({ error: 'Erro ao partilhar.' }, { status: 500 })

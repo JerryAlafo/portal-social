@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { createServerClient } from '@/lib/supabase-server'
+import { hitRateLimit } from '@/lib/rate-limit'
 
 export async function GET(_req: Request, props: { params: Promise<{ postId: string }> }) {
   try {
@@ -40,6 +41,12 @@ export async function POST(request: Request, props: { params: Promise<{ postId: 
 
     if (!content?.trim()) return NextResponse.json({ error: 'Comentário vazio.' }, { status: 400 })
     if (content.length > 500) return NextResponse.json({ error: 'Máximo 500 caracteres.' }, { status: 400 })
+    if (hitRateLimit(`comment:${session.user.id}`, 12, 60_000)) {
+      return NextResponse.json(
+        { error: 'Demasiados comentários em pouco tempo. Tenta novamente em instantes.' },
+        { status: 429 }
+      )
+    }
 
     const supabase = createServerClient()
 
@@ -63,7 +70,7 @@ export async function POST(request: Request, props: { params: Promise<{ postId: 
         user_id: post.author_id,
         actor_id: session.user.id,
         type: 'comment',
-        reference_id: postId,
+        post_id: postId,
       })
     }
 
@@ -80,7 +87,7 @@ export async function POST(request: Request, props: { params: Promise<{ postId: 
           user_id: parentComment.author_id,
           actor_id: session.user.id,
           type: 'comment',
-          reference_id: postId,
+          post_id: postId,
         })
       }
     }

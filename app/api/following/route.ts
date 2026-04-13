@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       user_id: user_id,
       actor_id: session.user.id,
       type: 'follow',
-      reference_id: session.user.id,
+      post_id: null,
     })
 
     return NextResponse.json({ data: { following: true }, error: null })
