@@ -80,7 +80,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'O conteúdo não pode estar vazio.' }, { status: 400 })
     }
 
-    const isFlooding = hitRateLimit(`post:${session.user.id}`, 6, 60_000)
+    const isFlooding = hitRateLimit(`post:${session.user.id}`, 5, 5 * 60_000)
     if (isFlooding) {
       return NextResponse.json(
         { error: 'Estás a publicar demasiado rápido. Tenta novamente em instantes.' },

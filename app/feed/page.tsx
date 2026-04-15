@@ -11,6 +11,7 @@ import { getSuggestions } from '@/services/suggestions'
 import { getEvents } from '@/services/events'
 import { followUser } from '@/services/following'
 import { uploadImage } from '@/services/upload'
+import FeatureUnavailableModal from '@/components/ui/FeatureUnavailableModal'
 import type { Post, TrendingTag, Profile, Event } from '@/types'
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll'
 
@@ -36,11 +37,12 @@ export default function FeedPage() {
   const [imageUrl,       setImageUrl]       = useState<string | null>(null)
   const [imagePreview,   setImagePreview]   = useState<string | null>(null)
   const [uploadingImg, setUploadingImg]  = useState(false)
+  const [showFeatureModal, setShowFeatureModal] = useState(false)
   const [followed,       setFollowed]       = useState<Set<string>>(new Set())
 
   const [trending,     setTrending]     = useState<TrendingTag[]>([])
   const [suggestions,  setSuggestions]  = useState<Profile[]>([])
-  const [events,       setEvents]       = useState<Event[]>([])
+  const [events, setEvents] = useState<Event[]>([])
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const composeRef = useRef<HTMLDivElement>(null)
@@ -178,8 +180,10 @@ export default function FeedPage() {
   const sessionRole = (session?.user as { role?: string } | undefined)?.role
   const initials   = session?.user?.avatar_initials || session?.user?.name?.slice(0, 2).toUpperCase() || '??'
   const firstName  = session?.user?.name?.split(' ')[0] || 'utilizador'
+  const avatarUrl  = (session?.user as { avatar_url?: string })?.avatar_url
 
   return (
+    <>
     <div className="feed-page">
       <Topbar title="Feed" />
 
@@ -188,7 +192,11 @@ export default function FeedPage() {
 
           <div className="feed-compose">
             <div className="feed-compose-top">
-              <div className="feed-compose-avatar">{initials}</div>
+              <div className="feed-compose-avatar">
+                {avatarUrl
+                  ? <img src={avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                  : initials}
+              </div>
               <div
                 ref={composeRef}
                 className="feed-compose-input"
@@ -218,8 +226,8 @@ export default function FeedPage() {
               <button className="feed-compose-btn" onClick={() => fileInputRef.current?.click()}>
                 <ImageIcon size={15} /> Imagem
               </button>
-              <button className="feed-compose-btn"><Film size={15} /> Video</button>
-              <button className="feed-compose-btn"><FileText size={15} /> Artigo</button>
+              <button className="feed-compose-btn" onClick={() => setShowFeatureModal(true)}><Film size={15} /> Video</button>
+              <button className="feed-compose-btn" onClick={() => setShowFeatureModal(true)}><FileText size={15} /> Artigo</button>
               <button className="feed-submit-btn" onClick={handlePublish} disabled={publishing || !composeText.trim() || uploadingImg}>
                 {publishing ? <Loader size={14} className="spin" /> : <Send size={14} />}
                 Publicar
@@ -289,7 +297,9 @@ export default function FeedPage() {
               {suggestions.map(u => (
                 <div key={u.id} className="feed-sugg-user">
                   <div className="feed-sugg-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
-                    {u.avatar_initials}
+                    {u.avatar_url
+                      ? <img src={u.avatar_url} alt={u.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                      : u.avatar_initials}
                   </div>
                   <div className="feed-sugg-info">
                     <div className="feed-sugg-name">{u.display_name}</div>
@@ -327,5 +337,11 @@ export default function FeedPage() {
         </aside>
       </div>
     </div>
+    <FeatureUnavailableModal
+      open={showFeatureModal}
+      onClose={() => setShowFeatureModal(false)}
+      hint="Estamos a preparar suporte a publicações em vídeo e artigos completos."
+    />
+    </>
   )
 }

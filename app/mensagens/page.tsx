@@ -3,11 +3,14 @@
 import { useState, useRef, useEffect, useCallback, Suspense } from 'react'
 import { useSession } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
-import { Search, Send, Phone, Video, MoreHorizontal, Smile, Paperclip, Check, CheckCheck, ArrowLeft, Loader, X, AlertCircle } from 'lucide-react'
+import { Search, Send, Phone, Video, MoreHorizontal, Smile, Paperclip, Check, CheckCheck, ArrowLeft, Loader } from 'lucide-react'
 import Topbar from '@/components/layout/Topbar'
 import { getConversations, getMessages, sendMessage } from '@/services/messages'
+import FeatureUnavailableModal from '@/components/ui/FeatureUnavailableModal'
 import type { Conversation, Message } from '@/types'
 import styles from './page.module.css'
+
+const QUICK_EMOJIS = ['😀', '😂', '🔥', '❤️', '👏', '🙌', '✨', '🤝']
 
 function MensagensContent() {
   const searchParams = useSearchParams()
@@ -23,8 +26,11 @@ function MensagensContent() {
   const [loadingMsgs, setLoadingMsgs] = useState(false)
   const [sending, setSending] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const msgInputRef = useRef<HTMLInputElement>(null)
+  const attachmentInputRef = useRef<HTMLInputElement>(null)
   const [initUserId, setInitUserId] = useState<string | null>(null)
   const [showNotAvailable, setShowNotAvailable] = useState(false)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [openingConv, setOpeningConv] = useState(false)
 
   // Load conversations
@@ -159,6 +165,24 @@ function MensagensContent() {
     }
   }
 
+  const handleAttachClick = () => {
+    attachmentInputRef.current?.click()
+  }
+
+  const handleAttachPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setInput((prev) => `${prev}${prev ? ' ' : ''}[Anexo: ${file.name}]`)
+    e.target.value = ''
+    msgInputRef.current?.focus()
+  }
+
+  const handleAddEmoji = (emoji: string) => {
+    setInput((prev) => `${prev}${emoji}`)
+    setShowEmojiPicker(false)
+    msgInputRef.current?.focus()
+  }
+
   const formatTime = (dateStr: string) => {
     const d = new Date(dateStr)
     return d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })
@@ -220,7 +244,9 @@ function MensagensContent() {
               >
                 <div className={styles.convAvatarWrap}>
                   <div className={styles.convAvatar} style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
-                    {c.other_user.avatar_initials}
+                    {c.other_user.avatar_url
+                      ? <img src={c.other_user.avatar_url} alt={c.other_user.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                      : c.other_user.avatar_initials}
                   </div>
                   {c.other_user.is_online && <span className={styles.onlineDot} />}
                 </div>
@@ -259,7 +285,9 @@ function MensagensContent() {
                 </button>
                 <div className={styles.chatAvatarWrap}>
                   <div className={styles.chatAvatar} style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
-                    {activeConv.other_user.avatar_initials}
+                    {activeConv.other_user.avatar_url
+                      ? <img src={activeConv.other_user.avatar_url} alt={activeConv.other_user.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                      : activeConv.other_user.avatar_initials}
                   </div>
                   {activeConv.other_user.is_online && <span className={styles.onlineDot} />}
                 </div>
@@ -270,7 +298,7 @@ function MensagensContent() {
                 <div className={styles.chatHeaderActions}>
                   <button className={styles.headerBtn} onClick={() => setShowNotAvailable(true)}><Phone size={16} /></button>
                   <button className={styles.headerBtn} onClick={() => setShowNotAvailable(true)}><Video size={16} /></button>
-                  <button className={styles.headerBtn}><MoreHorizontal size={16} /></button>
+                  <button className={styles.headerBtn} onClick={() => setShowNotAvailable(true)}><MoreHorizontal size={16} /></button>
                 </div>
               </div>
 
@@ -286,9 +314,11 @@ function MensagensContent() {
                       return (
                         <div key={msg.id} className={`${styles.msgRow} ${isMine ? styles.msgMine : ''}`}>
                           {!isMine && (
-                            <div className={styles.msgAvatar} style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
-                              {activeConv.other_user.avatar_initials}
-                            </div>
+                          <div className={styles.msgAvatar} style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
+                            {activeConv.other_user.avatar_url
+                              ? <img src={activeConv.other_user.avatar_url} alt={activeConv.other_user.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                              : activeConv.other_user.avatar_initials}
+                          </div>
                           )}
                           <div className={styles.msgBubble}>
                             <p className={styles.msgText}>{msg.content}</p>
@@ -311,8 +341,17 @@ function MensagensContent() {
 
               {/* Input */}
               <div className={styles.inputArea}>
-                <button className={styles.inputBtn}><Paperclip size={16} /></button>
                 <input
+                  ref={attachmentInputRef}
+                  type="file"
+                  style={{ display: 'none' }}
+                  onChange={handleAttachPick}
+                />
+                <button className={styles.inputBtn} onClick={handleAttachClick} aria-label="Anexar ficheiro">
+                  <Paperclip size={16} />
+                </button>
+                <input
+                  ref={msgInputRef}
                   className={styles.msgInput}
                   type="text"
                   placeholder={`Mensagem para ${activeConv.other_user.display_name}...`}
@@ -320,7 +359,28 @@ function MensagensContent() {
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSend()}
                 />
-                <button className={styles.inputBtn}><Smile size={16} /></button>
+                <div className={styles.emojiWrap}>
+                  <button
+                    className={styles.inputBtn}
+                    onClick={() => setShowEmojiPicker((prev) => !prev)}
+                    aria-label="Abrir emojis"
+                  >
+                    <Smile size={16} />
+                  </button>
+                  {showEmojiPicker && (
+                    <div className={styles.emojiPicker}>
+                      {QUICK_EMOJIS.map((emoji) => (
+                        <button
+                          key={emoji}
+                          className={styles.emojiBtn}
+                          onClick={() => handleAddEmoji(emoji)}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <button
                   className={`${styles.sendBtn} ${input.trim() ? styles.sendActive : ''}`}
                   onClick={handleSend}
@@ -334,24 +394,11 @@ function MensagensContent() {
         </div>
       </div>
 
-      {showNotAvailable && (
-        <div className={styles.modalOverlay} onClick={() => setShowNotAvailable(false)}>
-          <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <AlertCircle size={20} color="var(--amber)" />
-              <span>Funcionalidade Indisponível</span>
-              <button className={styles.modalClose} onClick={() => setShowNotAvailable(false)}><X size={18} /></button>
-            </div>
-            <div className={styles.modalBody}>
-              <p>Esta funcionalidade ainda não está disponível nesta versão.</p>
-              <p>Em breve poderás fazer chamadas de voz e vídeo com os teus amigos!</p>
-            </div>
-            <div className={styles.modalFooter}>
-              <button className={styles.modalOkBtn} onClick={() => setShowNotAvailable(false)}>Ok</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <FeatureUnavailableModal
+        open={showNotAvailable}
+        onClose={() => setShowNotAvailable(false)}
+        hint="Em breve poderás fazer chamadas de voz e vídeo com os teus amigos."
+      />
     </div>
   )
 }

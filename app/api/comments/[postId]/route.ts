@@ -41,7 +41,7 @@ export async function POST(request: Request, props: { params: Promise<{ postId: 
 
     if (!content?.trim()) return NextResponse.json({ error: 'Comentário vazio.' }, { status: 400 })
     if (content.length > 500) return NextResponse.json({ error: 'Máximo 500 caracteres.' }, { status: 400 })
-    if (hitRateLimit(`comment:${session.user.id}`, 12, 60_000)) {
+    if (hitRateLimit(`comment:${session.user.id}`, 6, 60_000)) {
       return NextResponse.json(
         { error: 'Demasiados comentários em pouco tempo. Tenta novamente em instantes.' },
         { status: 429 }

@@ -88,7 +88,9 @@ export default function SeguindoPage() {
                     {onlineFollowing.map(f => (
                       <div key={f.id} className="seguindo-online-bubble">
                         <div className="seguindo-online-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
-                          {f.avatar_initials || f.display_name?.slice(0, 2).toUpperCase()}
+                          {f.avatar_url
+                            ? <img src={f.avatar_url} alt={f.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                            : f.avatar_initials || f.display_name?.slice(0, 2).toUpperCase()}
                         </div>
                         <div className="seguindo-online-dot" />
                         <span className="seguindo-online-name">{f.display_name}</span>
@@ -152,7 +154,9 @@ export default function SeguindoPage() {
               <div key={f.id} className="seguindo-follow-item">
                 <div className="seguindo-follow-avatar-wrap">
                   <div className="seguindo-follow-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
-                    {f.avatar_initials || f.display_name?.slice(0, 2).toUpperCase()}
+                    {f.avatar_url
+                      ? <img src={f.avatar_url} alt={f.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                      : f.avatar_initials || f.display_name?.slice(0, 2).toUpperCase()}
                   </div>
                   {f.is_online && <span className="seguindo-online-dot-small" />}
                 </div>

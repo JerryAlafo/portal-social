@@ -187,8 +187,9 @@ button { font-family: var(--font-body); }
 .perfil-body { display: flex; max-width: 1200px; margin: 0 auto; padding: 0 16px; gap: 24px; }
 .perfil-main-col { flex: 1; min-width: 0; }
 .perfil-banner { height: 200px; background: linear-gradient(135deg, var(--bg3), var(--bg4)); border-radius: var(--radius-lg); position: relative; overflow: hidden; }
-.perfil-banner-overlay { position: absolute; inset: 0; background: linear-gradient(transparent 60%, var(--bg)); }
-.perfil-banner-edit-btn { position: absolute; bottom: 12px; right: 12px; display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(0,0,0,0.6); border: none; border-radius: 6px; color: var(--text); font-size: 12px; cursor: pointer; }
+.perfil-banner-overlay { position: absolute; inset: 0; background: linear-gradient(transparent 60%, var(--bg)); z-index: 1; }
+.perfil-banner-edit-btn { position: absolute; bottom: 12px; right: 12px; display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(0,0,0,0.6); border: none; border-radius: 6px; color: var(--text); font-size: 12px; cursor: pointer; z-index: 2; transition: background var(--transition); }
+.perfil-banner-edit-btn:hover { background: rgba(0,0,0,0.8); }
 .perfil-info-area { margin-top: -60px; position: relative; z-index: 1; padding: 0 16px; }
 .perfil-avatar-row { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
 .perfil-avatar-wrap { position: relative; }
@@ -212,9 +213,9 @@ button { font-family: var(--font-body); }
 .perfil-stat-num { font-size: 18px; font-weight: 700; font-family: var(--font-display); }
 .perfil-stat-label { font-size: 12px; color: var(--text3); }
 .perfil-tabs { display: flex; gap: 4px; margin-top: 24px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
-.perfil-tab { padding: 12px 20px; background: transparent; border: none; border-radius: 8px 8px 0 0; color: var(--text3); font-size: 14px; font-weight: 500; cursor: pointer; transition: all var(--transition); }
-.perfil-tab:hover { color: var(--text); }
-.perfil-tab-active { background: var(--bg3); color: var(--accent); }
+.perfil-tab { padding: 12px 20px; background: transparent; border: none; border-radius: 8px 8px 0 0; color: var(--text3); font-size: 14px; font-weight: 500; cursor: pointer; transition: all var(--transition); position: relative; z-index: 1; }
+.perfil-tab:hover { color: var(--text); background: var(--bg4); }
+.perfil-tab-active { background: var(--bg3); color: var(--accent); font-weight: 600; }
 .perfil-posts-col { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
 .perfil-gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 4px; margin-top: 16px; }
 .perfil-gallery-cell { aspect-ratio: 1; background: var(--bg3); border-radius: 4px; position: relative; cursor: pointer; }
@@ -448,8 +449,18 @@ button { font-family: var(--font-body); }
 .modal-close { width: 32px; height: 32px; border-radius: 50%; background: var(--bg4); border: none; color: var(--text2); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all var(--transition); }
 .modal-close:hover { background: var(--bg3); color: var(--text); }
 .modal-body { flex: 1; overflow-y: auto; padding: 8px 0; }
+.modal-footer { padding: 12px 20px 16px; display: flex; justify-content: flex-end; }
+.modal-ok-btn { padding: 8px 24px; background: var(--accent); color: #fff; border: none; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all var(--transition); }
+.modal-ok-btn:hover { background: var(--accent2); }
+.modal-ok-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .modal-loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--text3); }
 .modal-empty { text-align: center; padding: 40px 20px; color: var(--text3); font-size: 14px; }
+.modal-input { padding: 10px 14px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-size: 14px; font-family: var(--font-body); transition: border-color var(--transition); outline: none; width: 100%; box-sizing: border-box; }
+.modal-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.modal-input::placeholder { color: var(--text3); }
+.modal-textarea { padding: 10px 14px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-size: 14px; font-family: var(--font-body); transition: border-color var(--transition); outline: none; width: 100%; box-sizing: border-box; resize: vertical; min-height: 80px; }
+.modal-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.modal-textarea::placeholder { color: var(--text3); }
 
 /* User list items */
 .user-list-item { display: flex; align-items: center; gap: 12px; padding: 12px 20px; transition: background var(--transition); }
@@ -463,6 +474,10 @@ button { font-family: var(--font-body); }
 /* Clickable stats */
 .perfil-stat-clickable { background: transparent; border: none; cursor: pointer; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .perfil-stat-clickable:hover .perfil-stat-num { color: var(--accent2); }
+.perfil-banner-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.post-menu-perfil { position: absolute; min-width: 180px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-md); padding: 6px; z-index: 30; display: flex; flex-direction: column; gap: 4px; }
+.post-menu-item-perfil { background: transparent; border: none; text-align: left; font-size: 13px; color: var(--text2); padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.post-menu-item-perfil:hover { background: var(--bg3); color: var(--text); }
 
 /* Ensure flex children can actually scroll vertically */
 .feed-page,

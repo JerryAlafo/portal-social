@@ -216,7 +216,9 @@ export default function ExplorarPage() {
             ? suggestions.map(u => (
                 <div key={u.id} className="explorar-featured-user">
                   <div className="explorar-featured-user-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
-                    {u.avatar_initials || u.display_name?.slice(0, 2).toUpperCase()}
+                    {u.avatar_url
+                      ? <img src={u.avatar_url} alt={u.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                      : u.avatar_initials || u.display_name?.slice(0, 2).toUpperCase()}
                   </div>
                   <div className="explorar-featured-user-info">
                     <span className="explorar-featured-user-name">{u.display_name}</span>

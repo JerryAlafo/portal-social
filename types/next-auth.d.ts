@@ -6,6 +6,7 @@ declare module 'next-auth' {
     username?: string
     role?: string
     avatar_initials?: string
+    avatar_url?: string | null
   }
 
   interface Session {
@@ -14,6 +15,7 @@ declare module 'next-auth' {
       username: string
       role: string
       avatar_initials: string
+      avatar_url: string | null
     } & DefaultSession['user']
   }
 }
@@ -24,5 +26,6 @@ declare module 'next-auth/jwt' {
     username?: string
     role?: string
     avatar_initials?: string
+    avatar_url?: string | null
   }
 }

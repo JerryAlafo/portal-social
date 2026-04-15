@@ -34,6 +34,7 @@ interface Fanfic {
   id: string
   title: string
   synopsis: string | null
+  summary?: string | null
   fandom: string | null
   genre: string | null
   status: string
@@ -199,6 +200,7 @@ export default function UserProfilePage() {
         Publicacoes: 'posts',
         Fanfics: 'fanfics',
         Galeria: 'gallery',
+        Gostos: 'likes',
       }
 
       const tab = tabMap[activeTab]
@@ -214,7 +216,7 @@ export default function UserProfilePage() {
       setTabPage(page)
       setTabHasMore(Boolean(json.hasMore))
 
-      if (activeTab === 'Publicacoes') {
+      if (activeTab === 'Publicacoes' || activeTab === 'Gostos') {
         setPosts((prev) => (append ? [...prev, ...next] : next))
       } else if (activeTab === 'Fanfics') {
         setFanfics((prev) => (append ? [...prev, ...next] : next))
@@ -246,7 +248,7 @@ export default function UserProfilePage() {
   }, [loadTabData, loading, loadingMore, tabHasMore, tabPage])
 
   const sentinelRef = useInfiniteScroll({
-    enabled: activeTab !== 'Gostos',
+    enabled: true,
     hasMore: tabHasMore,
     isLoading: loading || loadingMore,
     onLoadMore: handleLoadMore,
@@ -365,7 +367,11 @@ export default function UserProfilePage() {
           <div className="perfil-info-area">
             <div className="perfil-avatar-row">
               <div className="perfil-avatar-wrap">
-                <div className="perfil-avatar">{initials}</div>
+                <div className="perfil-avatar">
+                  {profile.avatar_url
+                    ? <img src={profile.avatar_url} alt={profile.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                    : initials}
+                </div>
                 {isOwnProfile && <button className="perfil-avatar-edit-btn"><Edit3 size={12} /></button>}
               </div>
               <div className="perfil-name-meta">
@@ -445,6 +451,7 @@ export default function UserProfilePage() {
           <div className="perfil-tabs">
             {TABS.map(t => (
               <button
+                type="button"
                 key={t}
                 className={`perfil-tab ${activeTab === t ? 'perfil-tab-active' : ''}`}
                 onClick={() => setActiveTab(t)}
@@ -525,7 +532,7 @@ export default function UserProfilePage() {
                   <div key={f.id} className="perfil-fanfic-card">
                     <div className="perfil-fanfic-genre">Fanfic · {f.fandom} · {f.genre} · {f.chapters} capitulos</div>
                     <div className="perfil-fanfic-title">{f.title}</div>
-                    <p className="perfil-fanfic-desc">{f.synopsis}</p>
+                    <p className="perfil-fanfic-desc">{f.synopsis || f.summary || 'Sem resumo ainda.'}</p>
                     <div className="perfil-fanfic-meta">
                       <span>{fmt(f.reads_count)} leituras</span>
                       <span>{fmt(f.likes_count)} gostos</span>
@@ -543,8 +550,45 @@ export default function UserProfilePage() {
           )}
 
           {activeTab === 'Gostos' && (
-            <div className="perfil-empty-tab">
-              Publicacoes que gostaste aparecem aqui.
+            <div className="perfil-posts-col">
+              {posts.length === 0 ? (
+                <p className="perfil-empty-tab">Publicacoes que gostaste aparecem aqui.</p>
+              ) : (
+                posts.map(post => (
+                  <div key={post.id} className="post-card">
+                    <div className="post-header">
+                      <Link href={`/perfil/${post.author.username}`} className="post-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
+                        {post.author.avatar_url
+                          ? <img src={post.author.avatar_url} alt={post.author.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                          : post.author.avatar_initials}
+                      </Link>
+                      <div className="post-author-info">
+                        <Link href={`/perfil/${post.author.username}`} className="post-author-name" style={{ textDecoration: 'none', color: 'inherit' }}>
+                          {post.author.display_name}
+                          {post.author.role === 'superuser' && <span className="post-badge-su">Super User</span>}
+                          {post.author.role === 'mod' && <span className="post-badge-mod">Moderador</span>}
+                        </Link>
+                        <div className="post-meta">
+                          <Link href={`/perfil/${post.author.username}`} style={{ textDecoration: 'none', color: 'inherit' }}>@{post.author.username}</Link>
+                          <span>{timeAgo(post.created_at)}</span>
+                          {post.category && <span>{post.category}</span>}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="post-body">
+                      <p className="post-text">{post.content}</p>
+                      {post.image_url && (
+                        <img src={post.image_url} alt="Imagem do post" style={{ maxWidth: '100%', borderRadius: 'var(--radius)', marginTop: 12, maxHeight: 300, objectFit: 'cover' }} />
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+              {tabHasMore && (
+                <div ref={sentinelRef} className="feed-loading-state">
+                  {loadingMore ? <Loader2 size={18} className="spin" /> : null}
+                </div>
+              )}
             </div>
           )}
         </div>

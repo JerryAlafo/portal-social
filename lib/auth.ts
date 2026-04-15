@@ -50,7 +50,7 @@ export const authOptions: NextAuthConfig = {
 
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('username, display_name, role, avatar_initials')
+          .select('username, display_name, role, avatar_initials, avatar_url')
           .eq('id', user.id)
           .single()
 
@@ -71,6 +71,7 @@ export const authOptions: NextAuthConfig = {
           username: profile?.username ?? user.user_metadata?.username ?? '',
           role: profile?.role ?? 'member',
           avatar_initials: avatarInitials,
+          avatar_url: profile?.avatar_url ?? null,
         }
       },
     }),
@@ -82,6 +83,7 @@ export const authOptions: NextAuthConfig = {
         token.username = user.username
         token.role = user.role
         token.avatar_initials = user.avatar_initials
+        token.avatar_url = user.avatar_url
       }
       return token
     },
@@ -91,8 +93,36 @@ export const authOptions: NextAuthConfig = {
         session.user.username = token.username as string
         session.user.role = token.role as string
         session.user.avatar_initials = token.avatar_initials as string
+        session.user.avatar_url = token.avatar_url as string | null
       }
       return session
     },
   },
+}
+
+export const auth = async () => {
+  const { headers } = await import('next/headers')
+  const supabase = createServerClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) return null
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('username, display_name, role, avatar_initials, avatar_url')
+    .eq('id', session.user.id)
+    .single()
+
+  const avatarInitials = profile?.avatar_initials || session.user.email?.slice(0, 2).toUpperCase() || ''
+
+  return {
+    user: {
+      id: session.user.id,
+      email: session.user.email ?? '',
+      name: profile?.display_name ?? session.user.email ?? '',
+      username: profile?.username ?? '',
+      role: profile?.role ?? 'member',
+      avatar_initials: avatarInitials,
+      avatar_url: profile?.avatar_url ?? null,
+    },
+  }
 }

@@ -124,7 +124,9 @@ function PesquisarContent() {
                 : results.users.map(u => (
                   <div key={u.id} className="pesquisar-user-result">
                     <Link href={`/perfil/${u.username}`} className="pesquisar-user-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
-                      {u.avatar_initials || u.display_name?.slice(0, 2).toUpperCase()}
+                      {u.avatar_url
+                        ? <img src={u.avatar_url} alt={u.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                        : u.avatar_initials || u.display_name?.slice(0, 2).toUpperCase()}
                     </Link>
                     <div className="pesquisar-user-info">
                       <Link href={`/perfil/${u.username}`} className="pesquisar-user-name">{u.display_name}</Link>

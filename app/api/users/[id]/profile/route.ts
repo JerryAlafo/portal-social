@@ -85,6 +85,38 @@ export async function GET(
       if (error) throw error
       hasMore = (gallery?.length ?? 0) > limit
       data = gallery?.slice(0, limit) ?? []
+    } else if (tab === 'likes' || tab === 'gostos') {
+      const { data: likedPosts, error } = await supabase
+        .from('post_likes')
+        .select('post_id, created_at')
+        .eq('user_id', id)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit)
+
+      if (error) throw error
+      hasMore = (likedPosts?.length ?? 0) > limit
+      const slicedLiked = likedPosts?.slice(0, limit) ?? []
+      
+      if (slicedLiked.length > 0) {
+        const postIds = slicedLiked.map(l => l.post_id)
+        const { data: posts, error: postsError } = await supabase
+          .from('posts')
+          .select(`
+            *,
+            author:profiles!posts_author_id_fkey(id, username, display_name, avatar_initials, avatar_url, role)
+          `)
+          .in('id', postIds)
+
+        if (postsError) throw postsError
+        
+        const postsWithLikedByMe = (posts ?? []).map(p => ({
+          ...p,
+          liked_by_me: true,
+        }))
+        data = postsWithLikedByMe
+      } else {
+        data = []
+      }
     }
 
     return NextResponse.json({
