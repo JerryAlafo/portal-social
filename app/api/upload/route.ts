@@ -30,8 +30,9 @@ export async function POST(request: Request) {
     if (!file) return NextResponse.json({ error: 'Nenhum ficheiro enviado.' }, { status: 400 })
     if (!bucket || !BUCKETS.includes(bucket as Bucket)) return NextResponse.json({ error: 'Bucket inválido.' }, { status: 400 })
 
+    const fileType = file.type.trim()
     const allowed = type === 'document' ? ALLOWED_DOCS : ALLOWED_IMAGES
-    if (!allowed.includes(file.type)) {
+    if (!allowed.includes(fileType)) {
       const hint = type === 'document' ? 'Use PDF, DOC, DOCX, TXT ou EPUB.' : 'Use JPG, PNG, WebP ou GIF.'
       return NextResponse.json({ error: `Formato inválido. ${hint}` }, { status: 400 })
     }
@@ -45,13 +46,13 @@ export async function POST(request: Request) {
 
     const { error: uploadError } = await supabase.storage
       .from(bucket)
-      .upload(path, bytes, { contentType: file.type, upsert: false })
+      .upload(path, bytes, { contentType: fileType, upsert: false })
 
     if (uploadError) throw uploadError
 
     const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(path)
 
-    return NextResponse.json({ data: { url: publicUrl, name: file.name, size: file.size, type: file.type }, error: null }, { status: 201 })
+    return NextResponse.json({ data: { url: publicUrl, name: file.name, size: file.size, type: fileType }, error: null }, { status: 201 })
   } catch (e: unknown) {
     console.error('Upload error:', e)
     const msg = e instanceof Error ? e.message : 'Erro ao fazer upload.'
