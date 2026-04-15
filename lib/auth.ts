@@ -1,3 +1,4 @@
+import NextAuth from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import type { NextAuthConfig } from 'next-auth'
 import { createServerClient } from '@/lib/supabase-server'
@@ -100,29 +101,8 @@ export const authOptions: NextAuthConfig = {
   },
 }
 
-export const auth = async () => {
-  const { headers } = await import('next/headers')
-  const supabase = createServerClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) return null
+const handler = NextAuth(authOptions)
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('username, display_name, role, avatar_initials, avatar_url')
-    .eq('id', session.user.id)
-    .single()
+export const auth = handler.auth
 
-  const avatarInitials = profile?.avatar_initials || session.user.email?.slice(0, 2).toUpperCase() || ''
-
-  return {
-    user: {
-      id: session.user.id,
-      email: session.user.email ?? '',
-      name: profile?.display_name ?? session.user.email ?? '',
-      username: profile?.username ?? '',
-      role: profile?.role ?? 'member',
-      avatar_initials: avatarInitials,
-      avatar_url: profile?.avatar_url ?? null,
-    },
-  }
-}
+export const { GET, POST } = handler

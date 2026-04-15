@@ -137,7 +137,7 @@ export default function LoginPage() {
 
           <p className="login-tagline">
             {mode === 'login'
-              ? 'Bem-vindo de volta, otaku.'
+              ? 'O outro mundo espera por ti.'
               : 'Junta-te a maior comunidade de anime.'}
           </p>
 

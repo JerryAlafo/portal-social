@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server'
+import { auth } from '@/auth'
 import { createServerClient } from '@/lib/supabase-server'
 
 export async function GET() {
   try {
-    const { headers } = await import('next/headers')
-    const supabase = createServerClient()
-    const { data: { session } } = await supabase.auth.getSession()
-
+    const session = await auth()
     if (!session) return NextResponse.json({ data: [], error: null })
 
+    const supabase = createServerClient()
     const { data, error } = await supabase
       .from('gallery_likes')
       .select('item_id')

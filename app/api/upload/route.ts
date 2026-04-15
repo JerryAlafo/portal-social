@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { auth } from '@/auth'
 import { createServerClient } from '@/lib/supabase-server'
 
 const BUCKETS = ['avatars', 'covers', 'posts', 'gallery'] as const
@@ -16,9 +17,10 @@ const ALLOWED_DOCS = ['application/pdf', 'application/msword', 'application/vnd.
 
 export async function POST(request: Request) {
   try {
-    const supabase = createServerClient()
-    const { data: { session } } = await supabase.auth.getSession()
+    const session = await auth()
     if (!session) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
+
+    const supabase = createServerClient()
 
     const formData = await request.formData()
     const file    = formData.get('file')   as File | null
