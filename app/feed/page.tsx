@@ -180,7 +180,23 @@ export default function FeedPage() {
   const sessionRole = (session?.user as { role?: string } | undefined)?.role
   const initials   = session?.user?.avatar_initials || session?.user?.name?.slice(0, 2).toUpperCase() || '??'
   const firstName  = session?.user?.name?.split(' ')[0] || 'utilizador'
-  const avatarUrl  = (session?.user as { avatar_url?: string })?.avatar_url
+  const [profileAvatar, setProfileAvatar] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!session?.user?.id) return
+      try {
+        const res = await fetch(`/api/users/${session.user.id}/profile`)
+        const data = await res.json()
+        if (data.profile?.avatar_url) {
+          setProfileAvatar(data.profile.avatar_url)
+        }
+      } catch { /* ignore */ }
+    }
+    fetchProfile()
+  }, [session])
+
+  const avatarUrl = profileAvatar || (session?.user as { avatar_url?: string })?.avatar_url
 
   return (
     <>

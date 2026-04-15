@@ -72,6 +72,8 @@ export async function PATCH(request: Request) {
     const body = await request.json()
     const { id, action } = body
 
+    console.log('Gallery PATCH:', { id, action, user_id: session.user.id })
+
     if (!id || !action) return NextResponse.json({ error: 'ID e ação são obrigatórios.' }, { status: 400 })
 
     const supabase = createServerClient()
@@ -82,7 +84,9 @@ export async function PATCH(request: Request) {
         .select('*')
         .eq('item_id', id)
         .eq('user_id', session.user.id)
-        .single()
+        .maybeSingle()
+
+      console.log('Existing like:', existing)
 
       const { data: currentItem } = await supabase
         .from('gallery_items')

@@ -164,20 +164,24 @@ export default function FanficsPage() {
     try {
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('bucket', 'fanfics')
+      formData.append('bucket', 'posts')
       formData.append('type', 'document')
       const res = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       })
       const json = await res.json()
-      if (json.data?.url) {
+      if (json.error) {
+        showToast(json.error, 'error')
+        setAttachmentFile(null)
+      } else if (json.data?.url) {
         setAttachmentUrl(json.data.url)
       } else {
         setAttachmentFile(null)
       }
     } catch {
       setAttachmentFile(null)
+      showToast('Erro ao fazer upload', 'error')
     } finally {
       setUploadingFile(false)
       e.target.value = ''

@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
 import { createServerClient } from '@/lib/supabase-server'
 
 const BUCKETS = ['avatars', 'covers', 'posts', 'gallery'] as const
@@ -17,7 +16,8 @@ const ALLOWED_DOCS = ['application/pdf', 'application/msword', 'application/vnd.
 
 export async function POST(request: Request) {
   try {
-    const session = await auth()
+    const supabase = createServerClient()
+    const { data: { session } } = await supabase.auth.getSession()
     if (!session) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
 
     const formData = await request.formData()
@@ -37,8 +37,6 @@ export async function POST(request: Request) {
     const maxBytes = MAX_SIZE[bucket as Bucket]
     if (file.size > maxBytes) return NextResponse.json({ error: `Ficheiro demasiado grande. Máximo ${maxBytes / 1024 / 1024} MB.` }, { status: 400 })
 
-    const supabase = createServerClient()
-
     const ext = file.name.split('.').pop()?.toLowerCase() ?? 'pdf'
     const path = `${session.user.id}/${Date.now()}.${ext}`
     const bytes = await file.arrayBuffer()
@@ -53,6 +51,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ data: { url: publicUrl, name: file.name, size: file.size, type: file.type }, error: null }, { status: 201 })
   } catch (e: unknown) {
+    console.error('Upload error:', e)
     const msg = e instanceof Error ? e.message : 'Erro ao fazer upload.'
     return NextResponse.json({ error: msg }, { status: 500 })
   }
