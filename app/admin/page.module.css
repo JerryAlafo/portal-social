@@ -104,7 +104,60 @@
 
 /* ── Mobile ── */
 @media (max-width: 768px) {
-  .body { padding: 16px 12px; }
+  .body { padding: 16px 12px; gap: 16px; }
+  
+  .statsRow { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .statCard { padding: 14px; }
+  .statLabel { font-size: 10px; }
+  .statValue { font-size: 24px; }
+  .statChange { font-size: 11px; }
+  
+  .twoCol { grid-template-columns: 1fr; gap: 16px; }
+  .miniCol { gap: 12px; }
+  
+  .card { padding: 14px; }
+  .cardHeader { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .cardTitle { font-size: 14px; }
+  
+  .reportItem { flex-direction: column; gap: 10px; }
+  .reportActions { flex-direction: row; width: 100%; }
+  .reportActions button { flex: 1; justify-content: center; }
+  
+  .table th { font-size: 10px; padding: 0 8px 10px; }
+  .table td { padding: 8px; font-size: 12px; }
+  .userName { font-size: 12px; }
+  .userHandle { font-size: 10px; }
+  .roleBadge { font-size: 10px; padding: 2px 8px; }
+  
+  .tableBtns { flex-direction: column; }
+  .tableBtns button { width: 100%; }
+  
+  .modalContent { padding: 24px 20px; margin: 16px; }
+  .modalIcon { width: 56px; height: 56px; }
+  .modalIcon svg { size: 28px; }
+  .modalTitle { font-size: 20px; }
+  .modalDescription { font-size: 13px; }
+  .modalHint { font-size: 11px; }
+  .modalButton { padding: 10px 28px; font-size: 13px; }
+  
+  .announceItem { flex-direction: column; gap: 8px; }
+  .announceTitle { font-size: 12px; }
+}
+
+@media (max-width: 480px) {
+  .body { padding: 12px 8px; }
+  .statsRow { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .statCard { padding: 12px; }
+  .statValue { font-size: 20px; }
+  
+  .card { padding: 12px; }
+  .reportAvatar { width: 30px; height: 30px; font-size: 10px; }
+  .reportName { font-size: 12px; }
+  .reportText { font-size: 11px; }
+  .reportMeta { font-size: 10px; }
+  .reportActions button { padding: 4px 8px; font-size: 10px; }
+  
+  .userAvatar { width: 28px; height: 28px; font-size: 10px; }
 }
 .tdFaint { color: var(--text3); font-size: 12px; }
 .ownerLabel { font-size: 11px; color: var(--text3); }
@@ -122,3 +175,20 @@
 .btnDemote:hover { background: var(--red-bg); }
 .btnBan { color: var(--text3); border-color: var(--border); }
 .btnBan:hover { border-color: var(--red); color: var(--red); background: var(--red-bg); }
+
+/* Access Denied Modal */
+.modalOverlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+.modalContent { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 380px; padding: 32px; display: flex; flex-direction: column; align-items: center; text-align: center; animation: modalIn 0.25s ease; }
+@keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: none; } }
+
+.modalIcon { width: 64px; height: 64px; border-radius: 50%; background: var(--red-bg); display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+.modalIcon svg { color: var(--red); }
+
+.modalTitle { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 12px; }
+
+.modalDescription { font-size: 14px; color: var(--text2); line-height: 1.6; margin-bottom: 8px; }
+
+.modalHint { font-size: 12px; color: var(--text3); margin-bottom: 28px; }
+
+.modalButton { padding: 12px 36px; background: var(--accent); color: #fff; border: none; border-radius: 24px; font-size: 14px; font-weight: 600; font-family: var(--font-display); cursor: pointer; transition: all var(--transition); }
+.modalButton:hover { background: var(--accent2); transform: translateY(-1px); }

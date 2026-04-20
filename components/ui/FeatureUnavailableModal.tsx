@@ -1,6 +1,7 @@
 'use client'
 
 import { AlertCircle, X } from 'lucide-react'
+import styles from './FeatureUnavailableModal.module.css'
 
 interface FeatureUnavailableModalProps {
   open: boolean
@@ -20,22 +21,18 @@ export default function FeatureUnavailableModal({
   if (!open) return null
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <AlertCircle size={20} color="var(--amber)" />
-          <span>{title}</span>
-          <button className="modal-close" onClick={onClose} aria-label="Fechar modal">
-            <X size={18} />
-          </button>
+    <div className={styles.overlay} onClick={onClose}>
+      <div className={styles.content} onClick={(e) => e.stopPropagation()}>
+        <button className={styles.closeBtn} onClick={onClose} aria-label="Fechar">
+          <X size={18} />
+        </button>
+        <div className={styles.icon}>
+          <AlertCircle size={28} />
         </div>
-        <div className="modal-body">
-          <p>{description}</p>
-          {hint ? <p>{hint}</p> : null}
-        </div>
-        <div className="modal-footer">
-          <button className="modal-ok-btn" onClick={onClose}>Ok</button>
-        </div>
+        <div className={styles.title}>{title}</div>
+        <div className={styles.description}>{description}</div>
+        {hint && <div className={styles.hint}>{hint}</div>}
+        <button className={styles.button} onClick={onClose}>Entendi</button>
       </div>
     </div>
   )

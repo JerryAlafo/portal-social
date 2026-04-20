@@ -40,11 +40,16 @@ export async function GET() {
       .select('*', { count: 'exact', head: true })
       .eq('follower_id', userId)
 
+    const { count: totalPosts } = await supabase
+      .from('posts')
+      .select('*', { count: 'exact', head: true })
+
     return NextResponse.json({
       data: {
         unreadMessages: unreadMessages,
         unreadNotifications: unreadNotifications ?? 0,
         followingCount: followingCount ?? 0,
+        total_posts: totalPosts ?? 0,
       },
       error: null
     })
