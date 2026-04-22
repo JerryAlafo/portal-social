@@ -2,14 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import NextImage from 'next/image'
 import { usePathname } from 'next/navigation'
-import { useSession } from 'next-auth/react'
 import {
   Home, Search, Heart, MessageCircle, TrendingUp,
-  BookOpen, Calendar, Layers, Image, User, Settings,
+  BookOpen, Calendar, Layers, Image as ImageIcon, User, Settings,
   LogOut, Star, ShieldAlert, X, Sparkles
 } from 'lucide-react'
 import { useSidebar } from '@/lib/sidebar-context'
+import { useSession } from 'next-auth/react'
 import { logout } from '@/services/auth'
 import styles from './Sidebar.module.css'
 
@@ -25,7 +26,7 @@ const navEspecial = [
   { href: '/noticias', icon: BookOpen, label: 'Noticias' },
   { href: '/eventos',  icon: Calendar, label: 'Eventos' },
   { href: '/fanfics',  icon: Layers,   label: 'Fanfics' },
-  { href: '/galeria',  icon: Image,    label: 'Galeria' },
+  { href: '/galeria', icon: ImageIcon, label: 'Galeria' },
   { href: '/ia-portal', icon: Sparkles, label: 'IA Portal' },
 ]
 
@@ -73,12 +74,7 @@ export default function Sidebar() {
     <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`}>
       <div className={styles.logo}>
         <Link href="/feed" className={styles.logoMark} onClick={close}>
-          <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
-            <circle cx="16" cy="16" r="14" fill="#7c5cfc" opacity="0.15"/>
-            <circle cx="16" cy="16" r="14" stroke="#7c5cfc" strokeWidth="1.5"/>
-            <path d="M10 12L16 8L22 12V20L16 24L10 20V12Z" stroke="#9b7fff" strokeWidth="1.5" fill="rgba(124,92,252,0.2)"/>
-            <circle cx="16" cy="16" r="3" fill="#9b7fff"/>
-          </svg>
+          <NextImage src="/favicon.png" alt="PORTAL" width={26} height={26} />
           PORTAL
           <span className={styles.logoBeta}>Beta</span>
         </Link>

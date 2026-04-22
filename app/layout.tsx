@@ -9,6 +9,9 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "PORTAL — Rede Social para Otakus",
   description: "A rede social criada para a comunidade de anime e manga.",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({

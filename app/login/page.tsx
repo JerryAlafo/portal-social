@@ -1,8 +1,9 @@
-﻿'use client'
+'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
+import Image from 'next/image'
 import { ThemeProvider } from '@/lib/theme-context'
 import PasswordInput from '@/components/ui/PasswordInput'
 import Turnstile from '@/components/ui/Turnstile'
@@ -121,17 +122,7 @@ export default function LoginPage() {
 
         <div className="login-card">
           <div className="login-logo">
-            <svg width="36" height="36" viewBox="0 0 32 32" fill="none">
-              <circle cx="16" cy="16" r="14" fill="#7c5cfc" opacity="0.2" />
-              <circle cx="16" cy="16" r="14" stroke="#7c5cfc" strokeWidth="1.5" />
-              <path
-                d="M10 12L16 8L22 12V20L16 24L10 20V12Z"
-                stroke="#9b7fff"
-                strokeWidth="1.5"
-                fill="rgba(124,92,252,0.25)"
-              />
-              <circle cx="16" cy="16" r="3" fill="#9b7fff" />
-            </svg>
+            <Image src="/favicon.png" alt="PORTAL" width={36} height={36} />
             <span>PORTAL</span>
           </div>
 
