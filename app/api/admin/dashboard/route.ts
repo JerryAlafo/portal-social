@@ -23,6 +23,7 @@ export async function GET() {
 
     const now = new Date()
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+    const WEEKDAYS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
     const [reports, totalReports, announcements, totalAnnouncements, postsToday, dailyPosts, dailyLabels, reportsLast24h, monthlyRaw] = await Promise.all([
       supabase.from('reported_posts').select('id, post_id, reporter_id, reason, created_at').order('created_at', { ascending: false }).limit(20),
@@ -36,7 +37,12 @@ export async function GET() {
         const dayEnd = new Date(date.setHours(23, 59, 59, 999)).toISOString()
         return supabase.from('posts').select('*', { count: 'exact', head: true }).gte('created_at', dayStart).lte('created_at', dayEnd)
       })),
-      Promise.resolve(['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']),
+      Promise.resolve(
+        Array.from({ length: 7 }, (_, i) => {
+          const date = new Date(now.getTime() - (6 - i) * 24 * 60 * 60 * 1000)
+          return WEEKDAYS_PT[date.getDay()] || ''
+        }),
+      ),
       supabase.from('reported_posts').select('*', { count: 'exact', head: true }).gte('created_at', new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()),
       supabase.from('posts').select('created_at').gte('created_at', new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()),
       supabase.from('posts').select('category').in('category', ['geral', ' humor', 'musica', 'desporto', 'politica', 'tecnologia', 'outro']),
@@ -51,7 +57,10 @@ export async function GET() {
         if (idx >= 0 && idx < 30) monthlyPosts[idx]++
       })
     }
-    const monthlyLabels = Array.from({ length: 30 }, (_, i) => String(i + 1))
+    const monthlyLabels = Array.from({ length: 30 }, (_, i) => {
+      const date = new Date(now.getTime() - (29 - i) * 24 * 60 * 60 * 1000)
+      return String(date.getDate())
+    })
 
     const categories: Record<string, number> = { 'geral': 0, 'humor': 0, 'musica': 0, 'desporto': 0, 'politica': 0, 'tecnologia': 0, 'outro': 0 }
     if ((monthlyRaw as any).data) {
