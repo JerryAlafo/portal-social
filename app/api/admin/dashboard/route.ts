@@ -78,6 +78,43 @@ export async function GET() {
       dailyLabels.push(dayNames[dayOfWeek])
     }
 
+    // Monthly data for area chart (last 30 days)
+    const monthlyPosts: number[] = []
+    const monthlyLabels: string[] = []
+
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
+      const dayStart = new Date(date.setHours(0, 0, 0, 0)).toISOString()
+      const dayEnd = new Date(date.setHours(23, 59, 59, 999)).toISOString()
+
+      const { count } = await supabase
+        .from('posts')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', dayStart)
+        .lte('created_at', dayEnd)
+
+      monthlyPosts.push(count || 0)
+      monthlyLabels.push(date.getDate().toString())
+    }
+
+    // Category distribution
+    const { data: allPosts } = await supabase
+      .from('posts')
+      .select('category')
+
+    const categories: Record<string, number> = {}
+    if (allPosts) {
+      allPosts.forEach(p => {
+        const cat = p.category || 'Sem categoria'
+        categories[cat] = (categories[cat] || 0) + 1
+      })
+    }
+
+    const categoryData = Object.entries(categories)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6)
+
     const today = new Date()
     const last24h = new Date(today.getTime() - 24 * 60 * 60 * 1000)
     const { count: reportsLast24h } = await supabase
@@ -95,6 +132,9 @@ export async function GET() {
         postsToday: postsToday || 0,
         dailyPosts,
         dailyLabels,
+        monthlyPosts,
+        monthlyLabels,
+        categoryData,
         activeAnnouncements: (announcements || []).filter(a => a.status === 'published').length,
       },
       error: null,

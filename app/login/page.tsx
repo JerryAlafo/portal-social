@@ -44,6 +44,18 @@ export default function LoginPage() {
         return
       }
 
+      const banRes = await fetch('/api/auth/check-ban', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: values.email }),
+      })
+      const banData = await banRes.json()
+      if (banData.banned) {
+        setError(banData.permanent ? 'Esta conta foi suspensa permanentemente.' : 'Esta conta está suspensa até ' + new Date(banData.expires_at).toLocaleDateString('pt-PT'))
+        setLoading(false)
+        return
+      }
+
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -85,6 +97,18 @@ export default function LoginPage() {
       }
 
       router.push('/feed')
+      return
+    }
+
+    const banRes = await fetch('/api/auth/check-ban', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: values.email }),
+    })
+    const banData = await banRes.json()
+    if (banData.banned) {
+      setError(banData.permanent ? 'Esta conta foi suspensa permanentemente.' : 'Esta conta está suspensa até ' + new Date(banData.expires_at).toLocaleDateString('pt-PT'))
+      setLoading(false)
       return
     }
 

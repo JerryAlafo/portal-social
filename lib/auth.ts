@@ -49,6 +49,21 @@ export const authOptions: NextAuthConfig = {
 
         const user = data.user
 
+        const { data: banCheck } = await supabase
+          .from('banned_users')
+          .select('id, expires_at')
+          .eq('user_id', user.id)
+          .maybeSingle()
+
+        if (banCheck) {
+          const isPermanentBan = !banCheck.expires_at
+          const isActiveBan = banCheck.expires_at && new Date(banCheck.expires_at) > new Date()
+          
+          if (isPermanentBan || isActiveBan) {
+            return null
+          }
+        }
+
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('username, display_name, role, avatar_initials, avatar_url')
