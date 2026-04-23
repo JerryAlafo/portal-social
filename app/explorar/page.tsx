@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { TrendingUp, Flame, Clock, Star, Loader2 } from 'lucide-react'
+import { TrendingUp, Flame, Clock, Star, Loader2, X } from 'lucide-react'
 import Topbar from '@/components/layout/Topbar'
 import { getFeed } from '@/services/posts'
 import { getSuggestions } from '@/services/suggestions'
@@ -35,6 +35,7 @@ export default function ExplorarPage() {
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [followed, setFollowed] = useState<Set<string>>(new Set())
+  const [activeView, setActiveView] = useState<'posts' | 'suggestions'>('posts')
 
   const loadPostsPage = useCallback(async (targetPage: number, append: boolean) => {
     const postsRes = await getFeed(
@@ -163,8 +164,38 @@ export default function ExplorarPage() {
             ))}
           </div>
 
+          <div className="feed-tabs">
+            <button className={`feed-tab ${activeView === 'posts' ? 'feed-tab-active' : ''}`} onClick={() => setActiveView('posts')}>
+              Publicacoes
+            </button>
+            <button className={`feed-tab ${activeView === 'suggestions' ? 'feed-tab-active' : ''}`} onClick={() => setActiveView('suggestions')}>
+              Sugestoes
+            </button>
+          </div>
+
           {/* Posts */}
-          {loading ? (
+          {activeView === 'suggestions' ? (
+            <div className="feed-suggestions-list">
+              {suggestions.length > 0 ? suggestions.map(u => (
+                <div key={u.id} className="feed-sugg-user">
+                  <div className="feed-sugg-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
+                    {u.avatar_url
+                      ? <img src={u.avatar_url} alt={u.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                      : u.avatar_initials}
+                  </div>
+                  <div className="feed-sugg-info">
+                    <div className="feed-sugg-name">{u.display_name}</div>
+                    <div className="feed-sugg-handle">@{u.username} · {fmt(u.followers_count || 0)} seguidores</div>
+                  </div>
+                  <button className={`feed-follow-btn ${followed.has(u.username) ? 'feed-following-btn-feed' : ''}`} onClick={() => handleFollow(u.id, u.username)}>
+                    {followed.has(u.username) ? 'A seguir' : 'Seguir'}
+                  </button>
+                </div>
+              )) : (
+                <p style={{ color: 'var(--text3)', fontSize: 14 }}>Sem sugestoes por agora.</p>
+              )}
+            </div>
+          ) : loading ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
               <Loader2 size={24} className="spin" />
             </div>

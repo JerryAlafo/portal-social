@@ -16,7 +16,7 @@ import type { Post, TrendingTag, Profile, Event } from '@/types'
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll'
 
 const CATEGORIES = ['Tudo', 'Shonen', 'Shojo', 'Isekai', 'Seinen', 'Cosplay', 'Manga', 'Figura', 'AMV']
-const TABS = ['Geral', 'A seguir', 'Noticias', 'Anuncios']
+const TABS = ['Geral', 'A seguir', 'Sugestoes', 'Anuncios']
 
 function fmt(n: number) {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n)
@@ -267,7 +267,29 @@ export default function FeedPage() {
             ))}
           </div>
 
-          {loading ? (
+          {activeTab === 'Sugestoes' ? (
+            <div className="feed-suggestions-list">
+              <p className="feed-panel-title" style={{ marginBottom: '16px' }}>Sugestoes para ti</p>
+              {suggestions.length > 0 ? suggestions.map(u => (
+                <div key={u.id} className="feed-sugg-user">
+                  <div className="feed-sugg-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
+                    {u.avatar_url
+                      ? <img src={u.avatar_url} alt={u.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                      : u.avatar_initials}
+                  </div>
+                  <div className="feed-sugg-info">
+                    <div className="feed-sugg-name">{u.display_name}</div>
+                    <div className="feed-sugg-handle">@{u.username} · {fmt(u.followers_count || 0)} seguidores</div>
+                  </div>
+                  <button className={`feed-follow-btn ${followed.has(u.username) ? 'feed-following-btn-feed' : ''}`} onClick={() => handleFollow(u.id, u.username)}>
+                    {followed.has(u.username) ? 'A seguir' : 'Seguir'}
+                  </button>
+                </div>
+              )) : (
+                <p className="feed-empty-state">Sem sugestoes por agora.</p>
+              )}
+            </div>
+          ) : loading ? (
             <div className="feed-loading-state"><Loader size={24} className="spin" /></div>
           ) : posts.length === 0 ? (
             <p className="feed-empty-state">Nenhuma publicacao por aqui ainda.</p>
@@ -353,6 +375,7 @@ export default function FeedPage() {
         </aside>
       </div>
     </div>
+
     <FeatureUnavailableModal
       open={showFeatureModal}
       onClose={() => setShowFeatureModal(false)}
