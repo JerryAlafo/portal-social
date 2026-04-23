@@ -1,5 +1,6 @@
 import api from './api'
 import type { Post, PaginatedResponse, ApiResponse } from '@/types'
+import type { AxiosError } from 'axios'
 
 export async function getFeed(page = 1, limit = 20, category?: string, filter?: string): Promise<PaginatedResponse<Post>> {
   const params: Record<string, unknown> = { page, limit }
@@ -18,8 +19,14 @@ export async function createPost(payload: {
   image_url?: string
   is_spoiler?: boolean
 }): Promise<ApiResponse<Post>> {
-  const { data } = await api.post('/feed', payload)
-  return data
+  try {
+    const { data } = await api.post('/feed', payload)
+    return data
+  } catch (err) {
+    const axiosErr = err as AxiosError<{ error?: string }>
+    const message = axiosErr.response?.data?.error || 'Erro ao criar publicação.'
+    return { data: null, error: message }
+  }
 }
 
 export async function deletePost(id: string): Promise<ApiResponse<null>> {

@@ -90,19 +90,46 @@ export async function POST(request: Request) {
 
     const supabase = createServerClient()
 
-    const { data: post, error } = await supabase
-      .from('posts')
-      .insert({
-        author_id: session.user.id,
-        content,
-        category: category ?? null,
-        image_url: image_url ?? null,
-        is_spoiler: Boolean(is_spoiler),
-      })
-      .select(`*, author:profiles!posts_author_id_fkey(id, username, display_name, avatar_initials, avatar_url, role)`)
-      .single()
+    const baseInsert = {
+      author_id: session.user.id,
+      content,
+      category: category ?? null,
+      image_url: image_url ?? null,
+    } as Record<string, unknown>
 
-    if (error) throw error
+    const tryInsert = async (payload: Record<string, unknown>) => {
+      return await supabase
+        .from('posts')
+        .insert(payload)
+        .select(`*, author:profiles!posts_author_id_fkey(id, username, display_name, avatar_initials, avatar_url, role)`)
+        .single()
+    }
+
+    let insertRes = await tryInsert({ ...baseInsert, is_spoiler: Boolean(is_spoiler) })
+    if (insertRes.error) {
+      const msg = String(insertRes.error.message || '')
+      // Backwards-compatible: if DB doesn't have is_spoiler yet, retry without it.
+      if (msg.toLowerCase().includes('is_spoiler') && msg.toLowerCase().includes('does not exist')) {
+        insertRes = await tryInsert(baseInsert)
+      }
+    }
+
+    const { data: post, error } = insertRes
+
+    if (error) {
+      console.error('POST /api/feed insert error:', error)
+      const msg = String((error as { message?: unknown }).message ?? '')
+      const lower = msg.toLowerCase()
+      const isSchemaError =
+        lower.includes('does not exist') ||
+        lower.includes('column') ||
+        lower.includes('schema') ||
+        lower.includes('relation')
+      return NextResponse.json(
+        { error: msg || 'Erro ao criar publicação.' },
+        { status: isSchemaError ? 400 : 500 }
+      )
+    }
 
     const { data: followers } = await supabase
       .from('follows')
@@ -122,7 +149,12 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ data: { ...post, liked_by_me: false }, error: null }, { status: 201 })
-  } catch {
-    return NextResponse.json({ error: 'Erro ao criar publicação.' }, { status: 500 })
+  } catch (err) {
+    console.error('POST /api/feed error:', err)
+    const msg =
+      err && typeof err === 'object' && 'message' in err
+        ? String((err as { message?: unknown }).message ?? '')
+        : ''
+    return NextResponse.json({ error: msg || 'Erro ao criar publicação.' }, { status: 500 })
   }
 }

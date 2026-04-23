@@ -1945,6 +1945,16 @@ button {
   transform: translateY(-1px);
   box-shadow: 0 4px 16px var(--accent-glow);
 }
+
+.feed-compose-error {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--red-bg);
+  border: 1px solid rgba(252, 92, 125, 0.35);
+  color: var(--red);
+  font-size: 13px;
+}
 .feed-chips {
   display: flex;
   gap: 6px;

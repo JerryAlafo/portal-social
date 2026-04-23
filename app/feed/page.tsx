@@ -34,6 +34,8 @@ export default function FeedPage() {
   const [hasMore, setHasMore] = useState(true)
   const [composeText,    setComposeText]    = useState('')
   const [publishing,     setPublishing]     = useState(false)
+  const [publishError, setPublishError] = useState<string>('')
+  const [showPublishErrorModal, setShowPublishErrorModal] = useState(false)
   const [imageUrl,       setImageUrl]       = useState<string | null>(null)
   const [imagePreview,   setImagePreview]   = useState<string | null>(null)
   const [uploadingImg, setUploadingImg]  = useState(false)
@@ -134,6 +136,7 @@ export default function FeedPage() {
   const handlePublish = async () => {
     if (!composeText.trim() || publishing) return
     setPublishing(true)
+    setPublishError('')
     try {
       const normalizedCategory = composeCategory?.trim()
       const res = await createPost({
@@ -142,6 +145,11 @@ export default function FeedPage() {
         image_url: imageUrl ?? undefined,
         is_spoiler: composeSpoiler,
       })
+      if (res.error) {
+        setPublishError(res.error)
+        setShowPublishErrorModal(true)
+        return
+      }
       if (res.data) {
         setPosts(prev => [res.data!, ...prev])
         setComposeText('')
@@ -208,6 +216,13 @@ export default function FeedPage() {
     <>
     <div className="feed-page">
       <Topbar title="Feed" />
+
+      <FeatureUnavailableModal
+        open={showPublishErrorModal}
+        onClose={() => setShowPublishErrorModal(false)}
+        title="Erro ao publicar"
+        description={publishError || 'Não foi possível publicar agora.'}
+      />
 
       <div className="feed-body">
         <div className="feed-col">
