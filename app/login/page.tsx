@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import Image from 'next/image'
@@ -14,6 +14,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [turnstileToken, setTurnstileToken] = useState<string>('')
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0)
+  const turnstileWaiterRef = useRef<{ resolve: ((token: string) => void) | null }>({ resolve: null })
   const [values, setValues] = useState({
     email: '',
     password: '',
@@ -76,13 +78,32 @@ export default function LoginPage() {
         return
       }
 
+      // Turnstile tokens are single-use. After registering, we must get a fresh token before signing in.
+      setTurnstileToken('')
+      setTurnstileResetSignal((n) => n + 1)
+
+      const freshToken = await new Promise<string>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('turnstile_timeout')), 15_000)
+        turnstileWaiterRef.current.resolve = (token) => {
+          clearTimeout(timeout)
+          turnstileWaiterRef.current.resolve = null
+          resolve(token)
+        }
+      }).catch(() => '')
+
+      if (!freshToken) {
+        setError('Confirma o anti-bot novamente para entrar.')
+        setLoading(false)
+        return
+      }
+
       let signInResult
       try {
         signInResult = await signIn('credentials', {
           redirect: false,
           email: values.email,
           password: values.password,
-          turnstileToken,
+          turnstileToken: freshToken,
         })
       } catch {
         setError('Erro ao autenticar após registo.')
@@ -243,10 +264,14 @@ export default function LoginPage() {
 
             <Turnstile
               siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''}
-              onVerify={setTurnstileToken}
+              onVerify={(token) => {
+                setTurnstileToken(token)
+                turnstileWaiterRef.current.resolve?.(token)
+              }}
               onExpire={() => setTurnstileToken('')}
               theme="auto"
               size="normal"
+              resetSignal={turnstileResetSignal}
             />
 
             <button type="submit" className="login-submit" disabled={loading || !turnstileToken}>

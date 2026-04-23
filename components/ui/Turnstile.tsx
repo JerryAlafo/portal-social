@@ -29,6 +29,7 @@ interface TurnstileProps {
   theme?: 'light' | 'dark' | 'auto'
   size?: 'normal' | 'compact' | 'flexible'
   className?: string
+  resetSignal?: number
 }
 
 let scriptLoadPromise: Promise<void> | null = null
@@ -62,7 +63,7 @@ function loadTurnstileScript(): Promise<void> {
   return scriptLoadPromise
 }
 
-export default function Turnstile({ siteKey, onVerify, onError, onExpire, theme = 'auto', size = 'normal', className }: TurnstileProps) {
+export default function Turnstile({ siteKey, onVerify, onError, onExpire, theme = 'auto', size = 'normal', className, resetSignal }: TurnstileProps) {
   const hostRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const widgetIdRef = useRef<string | null>(null)
@@ -129,6 +130,15 @@ export default function Turnstile({ siteKey, onVerify, onError, onExpire, theme 
       widgetIdRef.current = null
     }
   }, [isReady, normalizedSiteKey, theme, size])
+
+  useEffect(() => {
+    const widgetId = widgetIdRef.current
+    if (!widgetId || !window.turnstile) return
+    try {
+      window.turnstile.reset(widgetId)
+    } catch {
+    }
+  }, [resetSignal])
 
   useEffect(() => {
     const recalculateScale = () => {
