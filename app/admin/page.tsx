@@ -15,6 +15,9 @@ import {
   Loader2,
   ShieldAlert,
   Megaphone,
+  Calendar,
+  Plus,
+  X,
 } from "lucide-react";
 import Topbar from "@/components/layout/Topbar";
 import { logout } from "@/services/auth";
@@ -81,6 +84,27 @@ interface DashboardData {
   dailyPosts: number[];
   dailyLabels: string[];
   activeAnnouncements: number;
+}
+
+interface Event {
+  id: string;
+  title: string;
+  description: string | null;
+  date: string;
+  location: string | null;
+  image_url: string | null;
+  interested_count: number;
+  going_count: number;
+  date_color: string;
+  created_at: string;
+}
+
+interface EventForm {
+  title: string;
+  description: string;
+  date: string;
+  location: string;
+  date_color: string;
 }
 
 const BADGE_LABELS: Record<ReportBadge, string> = {
@@ -160,6 +184,11 @@ export default function AdminPage() {
   const [reportsLast24h, setReportsLast24h] = useState(0);
   const [activeAnnouncements, setActiveAnnouncements] = useState(0);
   const [accessDenied, setAccessDenied] = useState(false);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [eventForm, setEventForm] = useState<EventForm>({ title: '', description: '', date: '', location: '', date_color: '#7c5cfc' });
+  const [savingEvent, setSavingEvent] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -225,6 +254,110 @@ export default function AdminPage() {
 
     fetchData();
   }, [router]);
+
+  useEffect(() => {
+    async function fetchEvents() {
+      try {
+        const res = await fetch('/api/events');
+        if (res.ok) {
+          const json = await res.json();
+          setEvents(json.data || []);
+        }
+      } catch { /* ignore */ }
+    }
+    fetchEvents();
+  }, []);
+
+  const loadEvents = async () => {
+    const res = await fetch('/api/events');
+    if (res.ok) {
+      const json = await res.json();
+      setEvents(json.data || []);
+    }
+  };
+
+  const handleCreateEvent = async () => {
+    if (!eventForm.title || !eventForm.date) {
+      alert('Título e data são obrigatórios');
+      return;
+    }
+    setSavingEvent(true);
+    try {
+      const res = await fetch('/api/events/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(eventForm),
+      });
+      if (res.ok) {
+        await loadEvents();
+        setShowEventModal(false);
+        setEventForm({ title: '', description: '', date: '', location: '', date_color: '#7c5cfc' });
+        setEditingEvent(null);
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Erro ao criar evento');
+      }
+    } catch {
+      alert('Erro ao comunicar com o servidor');
+    } finally {
+      setSavingEvent(false);
+    }
+  };
+
+  const handleUpdateEvent = async () => {
+    if (!editingEvent || !eventForm.title || !eventForm.date) {
+      alert('Título e data são obrigatórios');
+      return;
+    }
+    setSavingEvent(true);
+    try {
+      const res = await fetch('/api/events/admin', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingEvent.id, ...eventForm }),
+      });
+      if (res.ok) {
+        await loadEvents();
+        setShowEventModal(false);
+        setEventForm({ title: '', description: '', date: '', location: '', date_color: '#7c5cfc' });
+        setEditingEvent(null);
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Erro ao atualizar evento');
+      }
+    } catch {
+      alert('Erro ao comunicar com o servidor');
+    } finally {
+      setSavingEvent(false);
+    }
+  };
+
+  const handleDeleteEvent = async (id: string) => {
+    if (!confirm('Tens a certeza que queres eliminar este evento?')) return;
+    try {
+      const res = await fetch(`/api/events/admin?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setEvents(prev => prev.filter(e => e.id !== id));
+      }
+    } catch { alert('Erro ao eliminar evento'); }
+  };
+
+  const openEventModal = (event?: Event) => {
+    if (event) {
+      setEditingEvent(event);
+      setEventForm({
+        title: event.title,
+        description: event.description || '',
+        date: event.date.slice(0, 16),
+        location: event.location || '',
+        date_color: event.date_color || '#7c5cfc',
+      });
+    } else {
+      setEditingEvent(null);
+      setEventForm({ title: '', description: '', date: '', location: '', date_color: '#7c5cfc' });
+    }
+    setShowEventModal(true);
+  };
 
   const removeReport = (id: string) =>
     setReports((r) => r.filter((x) => x.id !== id));
@@ -297,6 +430,51 @@ export default function AdminPage() {
 
   return (
     <div className={styles.page}>
+      {showEventModal && (
+        <div className={styles.modalOverlay} onClick={() => { setShowEventModal(false); setEditingEvent(null); setEventForm({ title: '', description: '', date: '', location: '', date_color: '#7c5cfc' }); }}>
+          <div className={styles.eventModalContent} onClick={e => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3>{editingEvent ? 'Editar Evento' : 'Criar Evento'}</h3>
+              <button className={styles.closeBtn} onClick={() => { setShowEventModal(false); setEditingEvent(null); setEventForm({ title: '', description: '', date: '', location: '', date_color: '#7c5cfc' }); }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className={styles.formGroup}>
+              <label>Titulo *</label>
+              <input type="text" value={eventForm.title} onChange={e => setEventForm(p => ({ ...p, title: e.target.value }))} placeholder="Nome do evento" />
+            </div>
+            <div className={styles.formGroup}>
+              <label>Descricao</label>
+              <textarea value={eventForm.description} onChange={e => setEventForm(p => ({ ...p, description: e.target.value }))} placeholder="Descricao do evento" rows={3} />
+            </div>
+            <div className={styles.formGroup}>
+              <label>Data *</label>
+              <input type="datetime-local" value={eventForm.date} onChange={e => setEventForm(p => ({ ...p, date: e.target.value }))} />
+            </div>
+            <div className={styles.formGroup}>
+              <label>Localizacao</label>
+              <input type="text" value={eventForm.location} onChange={e => setEventForm(p => ({ ...p, location: e.target.value }))} placeholder="Local do evento" />
+            </div>
+            <div className={styles.formGroup}>
+              <label>Cor do cartaz</label>
+              <div className={styles.colorPicker}>
+                {/* <div className={styles.colorPreview} style={{ background: eventForm.date_color }} /> */}
+                <input type="text" value={eventForm.date_color} onChange={e => setEventForm(p => ({ ...p, date_color: e.target.value }))} placeholder="#7c5cfc" />
+                <input type="color" value={eventForm.date_color} onChange={e => setEventForm(p => ({ ...p, date_color: e.target.value }))} className={styles.colorInput} />
+              </div>
+            </div>
+            <div className={styles.modalActions}>
+              <button className={styles.cancelBtn} onClick={() => { setShowEventModal(false); setEditingEvent(null); setEventForm({ title: '', description: '', date: '', location: '', date_color: '#7c5cfc' }); }}>
+                Cancelar
+              </button>
+              <button className={styles.saveBtn} onClick={editingEvent ? handleUpdateEvent : handleCreateEvent} disabled={savingEvent}>
+                {savingEvent ? <Loader2 size={14} className="animate-spin" /> : (editingEvent ? 'Guardar' : 'Criar Evento')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {accessDenied && (
         <div className={styles.modalOverlay} onClick={handleCloseAccessDenied}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
@@ -502,6 +680,44 @@ export default function AdminPage() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Events */}
+        <div className={styles.card}>
+          <div className={styles.cardHeader}>
+            <span className={styles.cardTitle}>Eventos</span>
+            <button className={styles.addBtn} onClick={() => openEventModal()}>
+              <Plus size={14} /> Novo Evento
+            </button>
+          </div>
+          {events.length === 0 ? (
+            <div className={styles.emptyState}>
+              <Calendar size={24} color="var(--text3)" />
+              <p>Nenhum evento criado.</p>
+            </div>
+          ) : (
+            <div className={styles.eventsGrid}>
+              {events.map(ev => {
+                const eventDate = new Date(ev.date);
+                const dateStr = eventDate.toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
+                return (
+                  <div key={ev.id} className={styles.eventCard} style={{ borderLeftColor: ev.date_color || '#7c5cfc' }}>
+                    <div className={styles.eventDate} style={{ color: ev.date_color || '#7c5cfc' }}>{dateStr}</div>
+                    <div className={styles.eventTitle}>{ev.title}</div>
+                    {ev.location && <div className={styles.eventLocation}>{ev.location}</div>}
+                    <div className={styles.eventStats}>
+                      <span>{ev.interested_count} interessados</span>
+                      <span>{ev.going_count} vao</span>
+                    </div>
+                    <div className={styles.eventActions}>
+                      <button className={styles.editBtn} onClick={() => openEventModal(ev)}>Editar</button>
+                      <button className={styles.deleteBtn} onClick={() => handleDeleteEvent(ev.id)}>Eliminar</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Users table */}
