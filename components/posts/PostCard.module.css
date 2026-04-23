@@ -307,4 +307,18 @@
 .commentSendBtn { background: var(--accent); border: none; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; transition: opacity 0.2s; flex-shrink: 0; margin-top: 2px; }
 .commentSendBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.postImage { width: 100%; border-radius: var(--radius); margin-top: 10px; }
+.postImage {
+  width: 100%;
+  border-radius: var(--radius);
+  margin-top: 10px;
+  display: block;
+  max-height: 520px;
+  object-fit: contain;
+  background: var(--bg4);
+}
+
+@media (min-width: 1024px) {
+  .postImage {
+    max-height: 440px;
+  }
+}
