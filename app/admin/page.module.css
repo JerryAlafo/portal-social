@@ -217,6 +217,23 @@
 .colorInput::-webkit-color-swatch-wrapper { padding: 0; }
 .colorInput::-webkit-color-swatch { border: none; border-radius: 4px; }
 
+.selectInput { padding: 10px 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; font-family: var(--font-body); width: 100%; cursor: pointer; }
+.selectInput:focus { outline: none; border-color: var(--accent); }
+
+.checkboxGroup { margin-bottom: 14px; }
+.checkboxLabel { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; color: var(--text2); }
+.checkboxLabel input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent); }
+
+.announceItemFull { display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.announceItemFull:last-child { border-bottom: none; }
+.announceLeft { flex: 1; min-width: 0; }
+.announceTitle { font-size: 13px; font-weight: 600; color: var(--text); font-family: var(--font-display); display: flex; align-items: center; gap: 6px; }
+.pinIcon { color: var(--accent2); }
+.announceContent { font-size: 12px; color: var(--text2); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.announceMeta { font-size: 11px; color: var(--text3); margin-top: 4px; }
+.announceRight { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.announceActions { display: flex; gap: 6px; }
+
 .modalActions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
 .cancelBtn { padding: 10px 20px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--text2); font-size: 13px; font-weight: 500; cursor: pointer; transition: all var(--transition); }
 .cancelBtn:hover { background: var(--bg4); color: var(--text); }

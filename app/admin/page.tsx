@@ -18,6 +18,7 @@ import {
   Calendar,
   Plus,
   X,
+  Pin,
 } from "lucide-react";
 import Topbar from "@/components/layout/Topbar";
 import { logout } from "@/services/auth";
@@ -107,6 +108,13 @@ interface EventForm {
   date_color: string;
 }
 
+interface AnnouncementForm {
+  title: string;
+  content: string;
+  status: 'draft' | 'published' | 'archived';
+  pinned: boolean;
+}
+
 const BADGE_LABELS: Record<ReportBadge, string> = {
   spam: "Spam",
   explicit: "Explicit",
@@ -189,6 +197,10 @@ export default function AdminPage() {
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [eventForm, setEventForm] = useState<EventForm>({ title: '', description: '', date: '', location: '', date_color: '#7c5cfc' });
   const [savingEvent, setSavingEvent] = useState(false);
+  const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
+  const [announcementForm, setAnnouncementForm] = useState<AnnouncementForm>({ title: '', content: '', status: 'draft', pinned: false });
+  const [savingAnnouncement, setSavingAnnouncement] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -359,6 +371,90 @@ export default function AdminPage() {
     setShowEventModal(true);
   };
 
+  const handleCreateAnnouncement = async () => {
+    if (!announcementForm.title) {
+      alert('Título é obrigatório');
+      return;
+    }
+    setSavingAnnouncement(true);
+    try {
+      const res = await fetch('/api/announcements/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(announcementForm),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAnnouncements(prev => [data.data, ...prev]);
+        setShowAnnouncementModal(false);
+        setAnnouncementForm({ title: '', content: '', status: 'draft', pinned: false });
+        setEditingAnnouncement(null);
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Erro ao criar anúncio');
+      }
+    } catch {
+      alert('Erro ao comunicar com o servidor');
+    } finally {
+      setSavingAnnouncement(false);
+    }
+  };
+
+  const handleUpdateAnnouncement = async () => {
+    if (!editingAnnouncement || !announcementForm.title) {
+      alert('Título é obrigatório');
+      return;
+    }
+    setSavingAnnouncement(true);
+    try {
+      const res = await fetch('/api/announcements/admin', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingAnnouncement.id, ...announcementForm }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAnnouncements(prev => prev.map(a => a.id === data.data.id ? data.data : a));
+        setShowAnnouncementModal(false);
+        setAnnouncementForm({ title: '', content: '', status: 'draft', pinned: false });
+        setEditingAnnouncement(null);
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Erro ao atualizar anúncio');
+      }
+    } catch {
+      alert('Erro ao comunicar com o servidor');
+    } finally {
+      setSavingAnnouncement(false);
+    }
+  };
+
+  const handleDeleteAnnouncement = async (id: string) => {
+    if (!confirm('Tens a certeza que queres eliminar este anúncio?')) return;
+    try {
+      const res = await fetch(`/api/announcements/admin?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setAnnouncements(prev => prev.filter(a => a.id !== id));
+      }
+    } catch { alert('Erro ao eliminar anúncio'); }
+  };
+
+  const openAnnouncementModal = (ann?: Announcement) => {
+    if (ann) {
+      setEditingAnnouncement(ann);
+      setAnnouncementForm({
+        title: ann.title,
+        content: ann.content || '',
+        status: ann.status,
+        pinned: ann.pinned,
+      });
+    } else {
+      setEditingAnnouncement(null);
+      setAnnouncementForm({ title: '', content: '', status: 'draft', pinned: false });
+    }
+    setShowAnnouncementModal(true);
+  };
+
   const removeReport = (id: string) =>
     setReports((r) => r.filter((x) => x.id !== id));
 
@@ -430,6 +526,49 @@ export default function AdminPage() {
 
   return (
     <div className={styles.page}>
+      {showAnnouncementModal && (
+        <div className={styles.modalOverlay} onClick={() => { setShowAnnouncementModal(false); setEditingAnnouncement(null); setAnnouncementForm({ title: '', content: '', status: 'draft', pinned: false }); }}>
+          <div className={styles.eventModalContent} onClick={e => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3>{editingAnnouncement ? 'Editar Anuncio' : 'Criar Anuncio'}</h3>
+              <button className={styles.closeBtn} onClick={() => { setShowAnnouncementModal(false); setEditingAnnouncement(null); setAnnouncementForm({ title: '', content: '', status: 'draft', pinned: false }); }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className={styles.formGroup}>
+              <label>Titulo *</label>
+              <input type="text" value={announcementForm.title} onChange={e => setAnnouncementForm(p => ({ ...p, title: e.target.value }))} placeholder="Titulo do anuncio" />
+            </div>
+            <div className={styles.formGroup}>
+              <label>Conteudo</label>
+              <textarea value={announcementForm.content} onChange={e => setAnnouncementForm(p => ({ ...p, content: e.target.value }))} placeholder="Conteudo do anuncio" rows={4} />
+            </div>
+            <div className={styles.formGroup}>
+              <label>Estado</label>
+              <select value={announcementForm.status} onChange={e => setAnnouncementForm(p => ({ ...p, status: e.target.value as AnnouncementForm['status'] }))} className={styles.selectInput}>
+                <option value="draft">Rascunho</option>
+                <option value="published">Publicado</option>
+                <option value="archived">Arquivado</option>
+              </select>
+            </div>
+            <div className={styles.checkboxGroup}>
+              <label className={styles.checkboxLabel}>
+                <input type="checkbox" checked={announcementForm.pinned} onChange={e => setAnnouncementForm(p => ({ ...p, pinned: e.target.checked }))} />
+                <span>Fixo no topo</span>
+              </label>
+            </div>
+            <div className={styles.modalActions}>
+              <button className={styles.cancelBtn} onClick={() => { setShowAnnouncementModal(false); setEditingAnnouncement(null); setAnnouncementForm({ title: '', content: '', status: 'draft', pinned: false }); }}>
+                Cancelar
+              </button>
+              <button className={styles.saveBtn} onClick={editingAnnouncement ? handleUpdateAnnouncement : handleCreateAnnouncement} disabled={savingAnnouncement}>
+                {savingAnnouncement ? <Loader2 size={14} className="animate-spin" /> : (editingAnnouncement ? 'Guardar' : 'Criar Anuncio')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showEventModal && (
         <div className={styles.modalOverlay} onClick={() => { setShowEventModal(false); setEditingEvent(null); setEventForm({ title: '', description: '', date: '', location: '', date_color: '#7c5cfc' }); }}>
           <div className={styles.eventModalContent} onClick={e => e.stopPropagation()}>
@@ -652,9 +791,9 @@ export default function AdminPage() {
             <div className={styles.card}>
               <div className={styles.cardHeader}>
                 <span className={styles.cardTitle}>Anuncios</span>
-                <span className={activeAnnouncements > 0 ? styles.badgeGreen : styles.badgeAmber}>
-                  {activeAnnouncements} activos
-                </span>
+                <button className={styles.addBtn} onClick={() => openAnnouncementModal()}>
+                  <Plus size={14} /> Novo Anuncio
+                </button>
               </div>
               {announcements.length === 0 ? (
                 <div className={styles.emptyState}>
@@ -662,19 +801,24 @@ export default function AdminPage() {
                   <p>Nenhum anuncio.</p>
                 </div>
               ) : (
-                announcements.slice(0, 5).map((a) => (
-                  <div key={a.id} className={styles.announceItem}>
-                    <div className={styles.announceInfo}>
+                announcements.map((a) => (
+                  <div key={a.id} className={styles.announceItemFull}>
+                    <div className={styles.announceLeft}>
                       <div className={styles.announceTitle}>
-                        {a.pinned && "📌 "}{a.title}
+                        {a.pinned && <Pin size={12} className={styles.pinIcon} />}{a.title}
                       </div>
+                      {a.content && <div className={styles.announceContent}>{a.content}</div>}
                       <div className={styles.announceMeta}>{formatRelativeTime(a.created_at)}</div>
                     </div>
-                    <span
-                      className={`${styles.announceStatus} ${styles[`status_${a.status}`]}`}
-                    >
-                      {a.status === 'published' ? 'Publicado' : a.status === 'draft' ? 'Rascunho' : 'Arquivado'}
-                    </span>
+                    <div className={styles.announceRight}>
+                      <span className={`${styles.announceStatus} ${styles[`status_${a.status}`]}`}>
+                        {a.status === 'published' ? 'Publicado' : a.status === 'draft' ? 'Rascunho' : 'Arquivado'}
+                      </span>
+                      <div className={styles.announceActions}>
+                        <button className={styles.editBtn} onClick={() => openAnnouncementModal(a)}>Editar</button>
+                        <button className={styles.deleteBtn} onClick={() => handleDeleteAnnouncement(a.id)}>Eliminar</button>
+                      </div>
+                    </div>
                   </div>
                 ))
               )}
