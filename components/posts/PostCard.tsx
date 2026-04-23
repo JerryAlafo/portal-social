@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
-import { Heart, MessageCircle, Share2, MoreHorizontal, Send, Loader2, Check, Copy, Trash2, Pencil, Reply, X } from 'lucide-react'
+import { Heart, MessageCircle, Share2, MoreHorizontal, Send, Loader2, Check, Copy, Trash2, Pencil, Reply, X, AlertTriangle } from 'lucide-react'
 import type { Post, Comment } from '@/types'
 import { getComments, addComment, editComment, deleteComment, likeComment } from '@/services/comments'
 import styles from './PostCard.module.css'
@@ -138,6 +138,7 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
 
   const [menuOpen, setMenuOpen] = useState(false)
   const [commentsOpen, setCommentsOpen] = useState(false)
+  const [spoilerRevealed, setSpoilerRevealed] = useState(false)
   const [comments, setComments] = useState<Comment[]>([])
   const [commentsLoaded, setCommentsLoaded] = useState(false)
   const [loadingComments, setLoadingComments] = useState(false)
@@ -155,6 +156,8 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
 
   const myId = session?.user?.id ?? ''
   const myRole = (session?.user as { role?: string })?.role ?? ''
+  const isSpoiler = Boolean((post as Post).is_spoiler)
+  const canReveal = !isSpoiler || spoilerRevealed
 
   const handleToggleComments = async () => {
     const next = !commentsOpen
@@ -334,9 +337,25 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
       </div>
 
       <div className={styles.body}>
-        <p className={styles.text}>{post.content}</p>
-        {post.image_url && (
-          <img src={post.image_url} alt="Imagem do post" className={styles.postImage} />
+        {isSpoiler && !spoilerRevealed && (
+          <button
+            type="button"
+            className={styles.spoiler}
+            onClick={() => setSpoilerRevealed(true)}
+            title="Clique para revelar"
+          >
+            <AlertTriangle size={16} />
+            Este post está marcado como spoiler. Clique para revelar.
+          </button>
+        )}
+
+        {canReveal && (
+          <>
+            <p className={styles.text}>{post.content}</p>
+            {post.image_url && (
+              <img src={post.image_url} alt="Imagem do post" className={styles.postImage} />
+            )}
+          </>
         )}
       </div>
 

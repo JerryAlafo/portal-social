@@ -1900,6 +1900,18 @@ button {
   color: var(--text);
   border-color: var(--border2);
 }
+
+.feed-compose-btn-active {
+  background: var(--amber-bg);
+  color: var(--amber);
+  border-color: rgba(252, 180, 92, 0.35);
+}
+
+.feed-compose-btn-active:hover {
+  background: rgba(252, 180, 92, 0.22);
+  border-color: rgba(252, 180, 92, 0.6);
+  color: var(--amber);
+}
 .feed-submit-btn {
   display: flex;
   align-items: center;

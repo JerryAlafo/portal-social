@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
-import { Image as ImageIcon, Film, FileText, Send, Loader, X } from 'lucide-react'
+import { Image as ImageIcon, Film, FileText, Send, Loader, X, AlertTriangle } from 'lucide-react'
 import Topbar from '@/components/layout/Topbar'
 import PostCard from '@/components/posts/PostCard'
 import { getFeed, createPost, deletePost, toggleLike } from '@/services/posts'
@@ -38,6 +38,7 @@ export default function FeedPage() {
   const [imagePreview,   setImagePreview]   = useState<string | null>(null)
   const [uploadingImg, setUploadingImg]  = useState(false)
   const [composeCategory, setComposeCategory] = useState<string>('Outro')
+  const [composeSpoiler, setComposeSpoiler] = useState(false)
   const [showFeatureModal, setShowFeatureModal] = useState(false)
   const [followed,       setFollowed]       = useState<Set<string>>(new Set())
 
@@ -139,6 +140,7 @@ export default function FeedPage() {
         content: composeText.trim(),
         category: normalizedCategory && normalizedCategory !== 'Tudo' ? normalizedCategory : undefined,
         image_url: imageUrl ?? undefined,
+        is_spoiler: composeSpoiler,
       })
       if (res.data) {
         setPosts(prev => [res.data!, ...prev])
@@ -149,6 +151,7 @@ export default function FeedPage() {
         setImageUrl(null)
         setImagePreview(null)
         setComposeCategory('Outro')
+        setComposeSpoiler(false)
       }
     } catch { /* ignore */ }
     finally { setPublishing(false) }
@@ -252,6 +255,14 @@ export default function FeedPage() {
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
+              <button
+                type="button"
+                className={`feed-compose-btn ${composeSpoiler ? 'feed-compose-btn-active' : ''}`}
+                onClick={() => setComposeSpoiler(v => !v)}
+                title="Marcar como spoiler"
+              >
+                <AlertTriangle size={15} /> Spoiler
+              </button>
               <button className="feed-submit-btn" onClick={handlePublish} disabled={publishing || !composeText.trim() || uploadingImg}>
                 {publishing ? <Loader size={14} className="spin" /> : <Send size={14} />}
                 Publicar

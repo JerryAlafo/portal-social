@@ -24,6 +24,7 @@ export interface Post {
   content: string
   category: string | null
   image_url: string | null
+  is_spoiler?: boolean | null
   likes_count: number
   comments_count: number
   shares_count: number

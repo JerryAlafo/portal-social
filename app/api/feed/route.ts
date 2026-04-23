@@ -74,7 +74,7 @@ export async function POST(request: Request) {
     const session = await auth()
     if (!session) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
 
-    const { content, category, image_url } = await request.json()
+    const { content, category, image_url, is_spoiler } = await request.json()
 
     if (!content?.trim()) {
       return NextResponse.json({ error: 'O conteúdo não pode estar vazio.' }, { status: 400 })
@@ -92,7 +92,13 @@ export async function POST(request: Request) {
 
     const { data: post, error } = await supabase
       .from('posts')
-      .insert({ author_id: session.user.id, content, category: category ?? null, image_url: image_url ?? null })
+      .insert({
+        author_id: session.user.id,
+        content,
+        category: category ?? null,
+        image_url: image_url ?? null,
+        is_spoiler: Boolean(is_spoiler),
+      })
       .select(`*, author:profiles!posts_author_id_fkey(id, username, display_name, avatar_initials, avatar_url, role)`)
       .single()
 
