@@ -298,9 +298,9 @@
 .chartContainer { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; min-width: 0; }
 .chartTitle { font-size: 13px; font-weight: 700; color: var(--text2); margin-bottom: 14px; font-family: var(--font-display); }
 .barChart { display: flex; align-items: flex-end; gap: 2px; height: 100px; overflow-x: auto; padding-bottom: 4px; }
-.barWrapper { flex: 1; min-width: 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.bar { width: 100%; background: var(--accent); border-radius: 2px 2px 0 0; min-height: 2px; transition: height 0.3s ease; }
-.barWrapper:hover .bar { background: var(--accent2); }
+.barWrapper { flex: 1; min-width: 8px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; }
+.chartBar { flex: 0 0 auto; width: 100%; background: var(--accent2); opacity: 1; border-radius: 2px 2px 0 0; min-height: 2px; transition: height 0.3s ease; }
+.barWrapper:hover .chartBar { filter: brightness(1.05); }
 .barLabel { font-size: 9px; color: var(--text3); white-space: nowrap; }
 .categoryBars { display: flex; flex-direction: column; gap: 8px; }
 .categoryRow { display: flex; align-items: center; gap: 8px; min-width: 0; }

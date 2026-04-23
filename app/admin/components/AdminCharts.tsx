@@ -17,7 +17,7 @@ export function ActivityChart({ monthlyPosts, monthlyLabels }: ActivityChartProp
         {monthlyPosts.map((posts, i) => (
           <div key={i} className={styles.barWrapper}>
             <div 
-              className={styles.bar} 
+              className={styles.chartBar} 
               style={{ height: `${(posts / maxPosts) * 100}%` }}
               title={`${posts} publicações`}
             />
