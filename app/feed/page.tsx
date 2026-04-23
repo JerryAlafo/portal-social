@@ -15,7 +15,7 @@ import FeatureUnavailableModal from '@/components/ui/FeatureUnavailableModal'
 import type { Post, TrendingTag, Profile, Event } from '@/types'
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll'
 
-const CATEGORIES = ['Tudo', 'Shonen', 'Shojo', 'Isekai', 'Seinen', 'Cosplay', 'Manga', 'Figura', 'AMV']
+const CATEGORIES = ['Tudo', 'Shonen', 'Shojo', 'Isekai', 'Seinen', 'Cosplay', 'Manga', 'Figura', 'AMV', 'Outro']
 const TABS = ['Geral', 'A seguir', 'Sugestoes', 'Anuncios']
 
 function fmt(n: number) {
@@ -37,6 +37,7 @@ export default function FeedPage() {
   const [imageUrl,       setImageUrl]       = useState<string | null>(null)
   const [imagePreview,   setImagePreview]   = useState<string | null>(null)
   const [uploadingImg, setUploadingImg]  = useState(false)
+  const [composeCategory, setComposeCategory] = useState<string>('Outro')
   const [showFeatureModal, setShowFeatureModal] = useState(false)
   const [followed,       setFollowed]       = useState<Set<string>>(new Set())
 
@@ -133,9 +134,10 @@ export default function FeedPage() {
     if (!composeText.trim() || publishing) return
     setPublishing(true)
     try {
+      const normalizedCategory = composeCategory?.trim()
       const res = await createPost({
         content: composeText.trim(),
-        category: activeCategory !== ' Tudo' ? activeCategory : undefined,
+        category: normalizedCategory && normalizedCategory !== 'Tudo' ? normalizedCategory : undefined,
         image_url: imageUrl ?? undefined,
       })
       if (res.data) {
@@ -146,6 +148,7 @@ export default function FeedPage() {
         }
         setImageUrl(null)
         setImagePreview(null)
+        setComposeCategory('Outro')
       }
     } catch { /* ignore */ }
     finally { setPublishing(false) }
@@ -244,6 +247,11 @@ export default function FeedPage() {
               </button>
               <button className="feed-compose-btn" onClick={() => setShowFeatureModal(true)}><Film size={15} /> Video</button>
               <button className="feed-compose-btn" onClick={() => setShowFeatureModal(true)}><FileText size={15} /> Artigo</button>
+              <select className="feed-compose-select" value={composeCategory} onChange={e => setComposeCategory(e.target.value)}>
+                {CATEGORIES.filter(c => c !== 'Tudo').map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
               <button className="feed-submit-btn" onClick={handlePublish} disabled={publishing || !composeText.trim() || uploadingImg}>
                 {publishing ? <Loader size={14} className="spin" /> : <Send size={14} />}
                 Publicar

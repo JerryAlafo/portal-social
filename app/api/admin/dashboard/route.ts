@@ -22,10 +22,11 @@ export async function GET() {
     }
 
     const now = new Date()
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
     const WEEKDAYS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
-    const [reports, totalReports, announcements, totalAnnouncements, postsToday, dailyPosts, dailyLabels, reportsLast24h, monthlyRaw] = await Promise.all([
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+
+    const [reports, totalReports, announcements, totalAnnouncements, postsToday, dailyPosts, dailyLabels, reportsLast24h, monthlyRaw, categoriesRaw] = await Promise.all([
       supabase.from('reported_posts').select('id, post_id, reporter_id, reason, created_at').order('created_at', { ascending: false }).limit(20),
       supabase.from('reported_posts').select('*', { count: 'exact', head: true }),
       supabase.from('announcements').select('id, title, content, status, created_at, pinned').order('created_at', { ascending: false }).limit(10),
@@ -44,8 +45,8 @@ export async function GET() {
         }),
       ),
       supabase.from('reported_posts').select('*', { count: 'exact', head: true }).gte('created_at', new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()),
-      supabase.from('posts').select('created_at').gte('created_at', new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()),
-      supabase.from('posts').select('category').in('category', ['geral', ' humor', 'musica', 'desporto', 'politica', 'tecnologia', 'outro']),
+      supabase.from('posts').select('created_at').gte('created_at', thirtyDaysAgo.toISOString()),
+      supabase.from('posts').select('category').gte('created_at', thirtyDaysAgo.toISOString()),
     ])
 
     const monthlyPosts: number[] = Array(30).fill(0)
@@ -62,18 +63,24 @@ export async function GET() {
       return String(date.getDate())
     })
 
-    const categories: Record<string, number> = { 'geral': 0, 'humor': 0, 'musica': 0, 'desporto': 0, 'politica': 0, 'tecnologia': 0, 'outro': 0 }
-    if ((monthlyRaw as any).data) {
-      (monthlyRaw as any).data.forEach((p: { category?: string }) => {
-        const cat = p.category || 'outro'
-        if (categories[cat] !== undefined) {
-          categories[cat]++
-        } else {
-          categories.outro++
-        }
-      })
+    const categories: Record<string, number> = {}
+    if (categoriesRaw.data) {
+      for (const p of categoriesRaw.data as Array<{ category: string | null }>) {
+        const raw = (p.category ?? 'Outro').trim()
+        const key = raw.length ? raw : 'Outro'
+        categories[key] = (categories[key] ?? 0) + 1
+      }
     }
-    const categoryData = Object.entries(categories).map(([name, value]) => ({ name, value })).filter(c => c.value > 0).slice(0, 5)
+
+    const sortedCats = Object.entries(categories)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+
+    const totalCats = sortedCats.reduce((sum, c) => sum + c.value, 0)
+    const categoryData = [
+      { name: 'Tudo', value: totalCats },
+      ...sortedCats.filter(c => c.name !== 'Tudo').slice(0, 5),
+    ].filter(c => c.value > 0)
 
     return NextResponse.json({
       data: {

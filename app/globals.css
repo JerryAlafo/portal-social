@@ -1878,6 +1878,8 @@ button {
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 2;
 }
 .feed-compose-btn {
   display: flex;
@@ -1913,6 +1915,18 @@ button {
   font-family: var(--font-display);
   cursor: pointer;
   transition: all var(--transition);
+}
+
+.feed-compose-select {
+  padding: 7px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--text2);
+  font-size: 13px;
+  font-family: var(--font-body);
+  cursor: pointer;
+  max-width: 160px;
 }
 .feed-submit-btn:hover {
   background: var(--accent2);
