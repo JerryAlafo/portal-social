@@ -24,118 +24,62 @@ export async function GET() {
     const now = new Date()
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
-    const { data: reports, error: reportsError } = await supabase
-      .from('reported_posts')
-      .select('id, post_id, reporter_id, reason, created_at')
-      .order('created_at', { ascending: false })
-      .limit(20)
+    const [reports, totalReports, announcements, totalAnnouncements, postsToday, dailyPosts, dailyLabels, reportsLast24h, monthlyRaw] = await Promise.all([
+      supabase.from('reported_posts').select('id, post_id, reporter_id, reason, created_at').order('created_at', { ascending: false }).limit(20),
+      supabase.from('reported_posts').select('*', { count: 'exact', head: true }),
+      supabase.from('announcements').select('id, title, content, status, created_at, pinned').order('created_at', { ascending: false }).limit(10),
+      supabase.from('announcements').select('*', { count: 'exact', head: true }),
+      supabase.from('posts').select('*', { count: 'exact', head: true }).gte('created_at', now.toISOString().slice(0, 10)),
+      Promise.all([...Array(7)].map((_, i) => {
+        const date = new Date(now.getTime() - (6 - i) * 24 * 60 * 60 * 1000)
+        const dayStart = new Date(date.setHours(0, 0, 0, 0)).toISOString()
+        const dayEnd = new Date(date.setHours(23, 59, 59, 999)).toISOString()
+        return supabase.from('posts').select('*', { count: 'exact', head: true }).gte('created_at', dayStart).lte('created_at', dayEnd)
+      })),
+      Promise.resolve(['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']),
+      supabase.from('reported_posts').select('*', { count: 'exact', head: true }).gte('created_at', new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()),
+      supabase.from('posts').select('created_at').gte('created_at', new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()),
+      supabase.from('posts').select('category').in('category', ['geral', ' humor', 'musica', 'desporto', 'politica', 'tecnologia', 'outro']),
+    ])
 
-    if (reportsError) {
-      console.error('Erro ao buscar reports:', reportsError)
-    }
-
-    const { count: totalReports } = await supabase
-      .from('reported_posts')
-      .select('*', { count: 'exact', head: true })
-
-    const { data: announcements, error: announcementsError } = await supabase
-      .from('announcements')
-      .select('id, title, content, status, created_at, pinned')
-      .order('created_at', { ascending: false })
-      .limit(10)
-
-    if (announcementsError) {
-      console.error('Erro ao buscar anúncios:', announcementsError)
-    }
-
-    const { count: totalAnnouncements } = await supabase
-      .from('announcements')
-      .select('*', { count: 'exact', head: true })
-
-    const { count: postsToday } = await supabase
-      .from('posts')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', now.toISOString().slice(0, 10))
-
-    const dailyPosts: number[] = []
-    const dailyLabels: string[] = []
-    const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
-
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
-      const dayStart = new Date(date.setHours(0, 0, 0, 0)).toISOString()
-      const dayEnd = new Date(date.setHours(23, 59, 59, 999)).toISOString()
-
-      const { count } = await supabase
-        .from('posts')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', dayStart)
-        .lte('created_at', dayEnd)
-
-      dailyPosts.push(count || 0)
-
-      const dayOfWeek = date.getDay()
-      dailyLabels.push(dayNames[dayOfWeek])
-    }
-
-    // Monthly data for area chart (last 30 days)
-    const monthlyPosts: number[] = []
-    const monthlyLabels: string[] = []
-
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
-      const dayStart = new Date(date.setHours(0, 0, 0, 0)).toISOString()
-      const dayEnd = new Date(date.setHours(23, 59, 59, 999)).toISOString()
-
-      const { count } = await supabase
-        .from('posts')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', dayStart)
-        .lte('created_at', dayEnd)
-
-      monthlyPosts.push(count || 0)
-      monthlyLabels.push(date.getDate().toString())
-    }
-
-    // Category distribution
-    const { data: allPosts } = await supabase
-      .from('posts')
-      .select('category')
-
-    const categories: Record<string, number> = {}
-    if (allPosts) {
-      allPosts.forEach(p => {
-        const cat = p.category || 'Sem categoria'
-        categories[cat] = (categories[cat] || 0) + 1
+    const monthlyPosts: number[] = Array(30).fill(0)
+    if (monthlyRaw.data) {
+      monthlyRaw.data.forEach(p => {
+        const postDate = new Date(p.created_at)
+        const daysDiff = Math.floor((now.getTime() - postDate.getTime()) / (24 * 60 * 60 * 1000))
+        const idx = 29 - daysDiff
+        if (idx >= 0 && idx < 30) monthlyPosts[idx]++
       })
     }
+    const monthlyLabels = Array.from({ length: 30 }, (_, i) => String(i + 1))
 
-    const categoryData = Object.entries(categories)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 6)
-
-    const today = new Date()
-    const last24h = new Date(today.getTime() - 24 * 60 * 60 * 1000)
-    const { count: reportsLast24h } = await supabase
-      .from('reported_posts')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', last24h.toISOString())
+    const categories: Record<string, number> = { 'geral': 0, 'humor': 0, 'musica': 0, 'desporto': 0, 'politica': 0, 'tecnologia': 0, 'outro': 0 }
+    if ((monthlyRaw as any).data) {
+      (monthlyRaw as any).data.forEach((p: { category?: string }) => {
+        const cat = p.category || 'outro'
+        if (categories[cat] !== undefined) {
+          categories[cat]++
+        } else {
+          categories.outro++
+        }
+      })
+    }
+    const categoryData = Object.entries(categories).map(([name, value]) => ({ name, value })).filter(c => c.value > 0).slice(0, 5)
 
     return NextResponse.json({
       data: {
-        reports: reports || [],
-        totalReports: totalReports || 0,
-        reportsLast24h: reportsLast24h || 0,
-        announcements: announcements || [],
-        totalAnnouncements: totalAnnouncements || 0,
-        postsToday: postsToday || 0,
-        dailyPosts,
+        reports: reports.data || [],
+        totalReports: totalReports.count || 0,
+        reportsLast24h: reportsLast24h.count || 0,
+        announcements: announcements.data || [],
+        totalAnnouncements: totalAnnouncements.count || 0,
+        postsToday: postsToday.count || 0,
+        dailyPosts: dailyPosts.map(r => r.count || 0),
         dailyLabels,
         monthlyPosts,
         monthlyLabels,
         categoryData,
-        activeAnnouncements: (announcements || []).filter(a => a.status === 'published').length,
+        activeAnnouncements: (announcements.data || []).filter(a => a.status === 'published').length,
       },
       error: null,
     })

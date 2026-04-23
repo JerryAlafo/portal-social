@@ -119,6 +119,13 @@
   .cardHeader { flex-direction: column; align-items: flex-start; gap: 8px; }
   .cardTitle { font-size: 14px; }
   
+  .chartContainer { padding: 12px; }
+  .chartTitle { font-size: 12px; margin-bottom: 10px; }
+  .barChart { height: 70px; }
+  .barLabel { display: none; }
+  .categoryName { font-size: 10px; max-width: 50px; }
+  .categoryValue { font-size: 9px; }
+  
   .reportItem { flex-direction: column; gap: 10px; }
   .reportActions { flex-direction: row; width: 100%; }
   .reportActions button { flex: 1; justify-content: center; }
@@ -286,3 +293,18 @@
 .editBtn:hover { background: var(--accent-glow); }
 .deleteBtn { color: var(--red); border-color: rgba(252,92,125,0.3); }
 .deleteBtn:hover { background: var(--red-bg); }
+
+/* Charts */
+.chartContainer { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; min-width: 0; }
+.chartTitle { font-size: 13px; font-weight: 700; color: var(--text2); margin-bottom: 14px; font-family: var(--font-display); }
+.barChart { display: flex; align-items: flex-end; gap: 2px; height: 100px; overflow-x: auto; padding-bottom: 4px; }
+.barWrapper { flex: 1; min-width: 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.bar { width: 100%; background: var(--accent); border-radius: 2px 2px 0 0; min-height: 2px; transition: height 0.3s ease; }
+.barWrapper:hover .bar { background: var(--accent2); }
+.barLabel { font-size: 9px; color: var(--text3); white-space: nowrap; }
+.categoryBars { display: flex; flex-direction: column; gap: 8px; }
+.categoryRow { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.categoryName { font-size: 11px; color: var(--text2); min-width: 50px; max-width: 70px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.categoryBarBg { flex: 1; min-width: 60px; height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+.categoryBar { height: 100%; background: var(--accent2); border-radius: 3px; }
+.categoryValue { font-size: 10px; color: var(--text3); min-width: 24px; text-align: right; }

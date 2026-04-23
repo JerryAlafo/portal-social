@@ -20,11 +20,12 @@ import {
   X,
   Pin,
   Ban,
-  Clock,
 } from "lucide-react";
 import Topbar from "@/components/layout/Topbar";
 import { logout } from "@/services/auth";
 import styles from "./page.module.css";
+import { ConfirmModal, PromptModal, LoadingModal, SuccessModal, ErrorModal } from "./components/AdminModals";
+import { ActivityChart, CategoryBars } from "./components/AdminCharts";
 
 type ReportBadge = "spam" | "explicit" | "harassment";
 type UserRole = "superuser" | "mod" | "member";
@@ -203,6 +204,9 @@ export default function AdminPage() {
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
   const [announcementForm, setAnnouncementForm] = useState<AnnouncementForm>({ title: '', content: '', status: 'draft', pinned: false });
   const [savingAnnouncement, setSavingAnnouncement] = useState(false);
+  const [monthlyPosts, setMonthlyPosts] = useState<number[]>([]);
+  const [monthlyLabels, setMonthlyLabels] = useState<string[]>([]);
+  const [categoryData, setCategoryData] = useState<{ name: string; value: number }[]>([]);
   const [confirmModal, setConfirmModal] = useState<{ show: boolean; title: string; message: string; onConfirm: () => void }>({ show: false, title: '', message: '', onConfirm: () => {} });
   const [promptModal, setPromptModal] = useState<{ show: boolean; title: string; message: string; onConfirm: (value: string, duration: string) => void }>({ show: false, title: '', message: '', onConfirm: () => {} });
   const [promptValue, setPromptValue] = useState('');
@@ -210,9 +214,7 @@ export default function AdminPage() {
   const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
   const [errorModal, setErrorModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
   const [loadingModal, setLoadingModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
-  const [monthlyPosts, setMonthlyPosts] = useState<number[]>([]);
-  const [monthlyLabels, setMonthlyLabels] = useState<string[]>([]);
-  const [categoryData, setCategoryData] = useState<{ name: string; value: number }[]>([]);
+  const [banningUserId, setBanningUserId] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -470,10 +472,10 @@ export default function AdminPage() {
     setShowAnnouncementModal(true);
   };
 
-  const [banningUserId, setBanningUserId] = useState<string | null>(null);
-  const [banningUserName, setBanningUserName] = useState<string>('');
+  const removeReport = (id: string) =>
+    setReports((r) => r.filter((x) => x.id !== id));
 
-const handleBanUser = async (userId: string, userName: string) => {
+  const handleBanUser = async (userId: string, userName: string) => {
     setConfirmModal({
       show: true,
       title: 'Banir Utilizador',
@@ -516,9 +518,6 @@ const handleBanUser = async (userId: string, userName: string) => {
       },
     });
   };
-
-  const removeReport = (id: string) =>
-    setReports((r) => r.filter((x) => x.id !== id));
 
   const cycleRole = async (id: string, direction: "up" | "down") => {
     const user = users.find(u => u.id === id);
@@ -588,90 +587,27 @@ const handleBanUser = async (userId: string, userName: string) => {
 
   return (
     <div className={styles.page}>
-      {confirmModal.show && (
-        <div className={styles.modalOverlay} onClick={() => setConfirmModal({ show: false, title: '', message: '', onConfirm: () => {} })}>
-          <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
-            <div className={styles.modalIcon}>
-              <Ban size={28} />
-            </div>
-            <div className={styles.modalTitle}>{confirmModal.title}</div>
-            <div className={styles.modalDescription}>{confirmModal.message}</div>
-            <div className={styles.modalActions}>
-              <button className={styles.cancelBtn} onClick={() => setConfirmModal({ show: false, title: '', message: '', onConfirm: () => {} })}>
-                Cancelar
-              </button>
-              <button className={styles.saveBtn} onClick={confirmModal.onConfirm}>
-                Confirmar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {promptModal.show && (
-        <div className={styles.modalOverlay} onClick={() => setPromptModal({ show: false, title: '', message: '', onConfirm: () => {} })}>
-          <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
-            <div className={styles.modalTitle}>{promptModal.title}</div>
-            <div className={styles.modalDescription}>{promptModal.message}</div>
-            <div className={styles.formGroup}>
-              <label>Motivo</label>
-              <input type="text" value={promptValue} onChange={e => setPromptValue(e.target.value)} className={styles.promptInput} placeholder="Ex: Spam ou comportamento indevido" />
-            </div>
-            <div className={styles.formGroup}>
-              <label>Dias (vazio = permanente)</label>
-              <input type="number" value={durationValue} onChange={e => setDurationValue(e.target.value)} className={styles.promptInput} placeholder="Ex: 7" min="1" />
-            </div>
-            <div className={styles.modalActions}>
-              <button className={styles.cancelBtn} onClick={() => { setPromptModal({ show: false, title: '', message: '', onConfirm: () => {} }); setPromptValue(''); setDurationValue(''); }}>
-                Cancelar
-              </button>
-              <button className={styles.saveBtn} onClick={() => { promptModal.onConfirm(promptValue, durationValue); setPromptValue(''); setDurationValue(''); }}>
-                Confirmar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {loadingModal.show && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.loadingModal}>
-            <Loader2 size={32} className="animate-spin" />
-            <span>{loadingModal.message}</span>
-          </div>
-        </div>
-      )}
-
-      {successModal.show && (
-        <div className={styles.modalOverlay} onClick={() => setSuccessModal({ show: false, message: '' })}>
-          <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
-            <div className={styles.modalIcon} style={{ background: 'var(--green-bg)' }}>
-              <CheckCircle size={28} style={{ color: 'var(--green)' }} />
-            </div>
-            <div className={styles.modalTitle}>Sucesso</div>
-            <div className={styles.modalDescription}>{successModal.message}</div>
-            <button className={styles.modalButton} onClick={() => setSuccessModal({ show: false, message: '' })}>
-              OK
-            </button>
-          </div>
-        </div>
-      )}
-
-      {errorModal.show && (
-        <div className={styles.modalOverlay} onClick={() => setErrorModal({ show: false, message: '' })}>
-          <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
-            <div className={styles.modalIcon} style={{ background: 'var(--red-bg)' }}>
-              <AlertCircle size={28} style={{ color: 'var(--red)' }} />
-            </div>
-            <div className={styles.modalTitle}>Erro</div>
-            <div className={styles.modalDescription}>{errorModal.message}</div>
-            <button className={styles.modalButton} onClick={() => setErrorModal({ show: false, message: '' })}>
-              OK
-            </button>
-          </div>
-        </div>
-      )}
-
+      <ConfirmModal
+        show={confirmModal.show}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ show: false, title: '', message: '', onConfirm: () => {} })}
+      />
+      <PromptModal
+        show={promptModal.show}
+        title={promptModal.title}
+        message={promptModal.message}
+        promptValue={promptValue}
+        durationValue={durationValue}
+        onPromptChange={setPromptValue}
+        onDurationChange={setDurationValue}
+        onConfirm={() => promptModal.onConfirm(promptValue, durationValue)}
+        onCancel={() => { setPromptModal({ show: false, title: '', message: '', onConfirm: () => {} }); setPromptValue(''); setDurationValue(''); }}
+      />
+      <LoadingModal show={loadingModal.show} message={loadingModal.message} />
+      <SuccessModal show={successModal.show} message={successModal.message} onClose={() => setSuccessModal({ show: false, message: '' })} />
+      <ErrorModal show={errorModal.show} message={errorModal.message} onClose={() => setErrorModal({ show: false, message: '' })} />
       {showAnnouncementModal && (
         <div className={styles.modalOverlay} onClick={() => { setShowAnnouncementModal(false); setEditingAnnouncement(null); setAnnouncementForm({ title: '', content: '', status: 'draft', pinned: false }); }}>
           <div className={styles.eventModalContent} onClick={e => e.stopPropagation()}>
@@ -843,6 +779,12 @@ const handleBanUser = async (userId: string, userName: string) => {
           ))}
         </div>
 
+        {/* Activity Charts */}
+        <div className={styles.twoCol}>
+          <ActivityChart monthlyPosts={monthlyPosts} monthlyLabels={monthlyLabels} />
+          <CategoryBars data={categoryData} />
+        </div>
+
         {/* Two col */}
         <div className={styles.twoCol}>
           {/* Reports */}
@@ -896,7 +838,42 @@ const handleBanUser = async (userId: string, userName: string) => {
                   </button>
                 </div>
               </div>
-))}
+            ))}
+          </div>
+
+          {/* Right mini cards */}
+          <div className={styles.miniCol}>
+            <div className={styles.card}>
+              <div className={styles.cardTitle} style={{ marginBottom: 16 }}>
+                Actividade (7 dias)
+              </div>
+              <div className={styles.miniChart}>
+                {dailyPosts.length > 0 ? dailyPosts.map((h, i) => {
+                  const max = Math.max(...dailyPosts, 1);
+                  return (
+                    <div
+                      key={i}
+                      className={`${styles.bar} ${i === 6 ? styles.barToday : ""}`}
+                      style={{ height: `${(h / max) * 100}%` }}
+                      title={`${h} posts`}
+                    />
+                  );
+                }) : [35, 55, 45, 80, 65, 90, 100].map((h, i) => (
+                  <div
+                    key={i}
+                    className={`${styles.bar} ${i === 6 ? styles.barToday : ""}`}
+                    style={{ height: `${h}%` }}
+                    title={dailyLabels[i] || ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'][i]}
+                  />
+                ))}
+              </div>
+              <div className={styles.chartLabels}>
+                {(dailyLabels.length > 0 ? dailyLabels : ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']).map((d, i) => (
+                  <span key={d} className={i === 6 ? styles.labelToday : ""}>
+                    {d}
+                  </span>
+                ))}
+              </div>
             </div>
 
             <div className={styles.card}>
@@ -936,6 +913,7 @@ const handleBanUser = async (userId: string, userName: string) => {
             </div>
           </div>
         </div>
+
         {/* Events */}
         <div className={styles.card}>
           <div className={styles.cardHeader}>
@@ -1054,9 +1032,8 @@ const handleBanUser = async (userId: string, userName: string) => {
                             </button>
                           )}
                           <button className={styles.btnBan} onClick={() => handleBanUser(u.id, u.name)} disabled={banningUserId === u.id}>
-                            {banningUserId === u.id ? <Loader2 size={12} className="animate-spin" /> : <Ban size={12} />}
-                            Ban
-                          </button>
+                                {banningUserId === u.id ? <Loader2 size={12} className="animate-spin" /> : "Ban"}
+                              </button>
                         </div>
                       )}
                     </td>
@@ -1067,6 +1044,6 @@ const handleBanUser = async (userId: string, userName: string) => {
           </div>
         </div>
       </div>
-    // </div>
+    </div>
   );
 }
