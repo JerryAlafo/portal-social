@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import Topbar from '@/components/layout/Topbar'
 import PostCard from '@/components/posts/PostCard'
+import { toggleLike, deletePost } from '@/services/posts'
 import type { Post } from '@/types'
 
 export default function PostPage() {
@@ -35,6 +36,20 @@ export default function PostPage() {
     loadPost()
   }, [params?.id])
 
+  const handleLike = async (id: string) => {
+    if (!post) return
+    setPost(prev => prev ? { ...prev, liked_by_me: !prev.liked_by_me, likes_count: prev.liked_by_me ? prev.likes_count - 1 : prev.likes_count + 1 } : null)
+    try {
+      await toggleLike(id)
+    } catch {
+      setPost(prev => prev ? { ...prev, liked_by_me: !prev.liked_by_me, likes_count: prev.liked_by_me ? prev.likes_count - 1 : prev.likes_count + 1 } : null)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    await deletePost(id)
+  }
+
   return (
     <div className="feed-page">
       <Topbar title="Publicação" />
@@ -46,7 +61,7 @@ export default function PostPage() {
             <p className="feed-empty-state">Publicação não encontrada.</p>
           ) : (
             <div className="feed-posts">
-              <PostCard post={post} />
+              <PostCard post={post} onLike={handleLike} onDelete={handleDelete} />
             </div>
           )}
         </div>
