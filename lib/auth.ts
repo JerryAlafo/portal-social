@@ -53,13 +53,15 @@ export const authOptions: NextAuthConfig = {
           .from('banned_users')
           .select('id, expires_at')
           .eq('user_id', user.id)
-          .maybeSingle()
 
         if (banCheck) {
-          const isPermanentBan = !banCheck.expires_at
-          const isActiveBan = banCheck.expires_at && new Date(banCheck.expires_at) > new Date()
+          const isActive = banCheck.some(ban => {
+            const isPermanent = !ban.expires_at
+            const isBanActive = ban.expires_at && new Date(ban.expires_at) > new Date()
+            return isPermanent || isBanActive
+          })
           
-          if (isPermanentBan || isActiveBan) {
+          if (isActive) {
             return null
           }
         }
@@ -119,4 +121,5 @@ export const authOptions: NextAuthConfig = {
 const { auth, handlers } = NextAuth(authOptions)
 
 export { auth }
-export const { GET, POST } = handlers
+export const GET = handlers.GET
+export const POST = handlers.POST

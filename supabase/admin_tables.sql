@@ -116,3 +116,14 @@ create policy "banned_users_insert" on banned_users
       and profiles.role = 'superuser'
     )
   );
+
+drop policy if exists "banned_users_delete" on banned_users;
+create policy "banned_users_delete" on banned_users
+  for delete to authenticated
+  using (
+    exists (
+      select 1 from profiles
+      where profiles.id = auth.uid()
+      and profiles.role = 'superuser'
+    )
+  );

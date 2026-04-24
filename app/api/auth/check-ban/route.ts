@@ -12,35 +12,44 @@ export async function POST(req: Request) {
 
     const supabase = createServerClient()
 
-    const { data: user } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', email)
-      .single()
+    console.log('Checking ban for email:', email)
+
+    // Find user by email in auth.users
+    const { data: authData, error: authError } = await supabase.auth.admin.listUsers()
+    const user = authData?.users.find(u => u.email?.toLowerCase() === email.toLowerCase())
+
+    console.log('Auth user lookup:', { user, authError })
 
     if (!user) {
+      console.log('User not found')
       return NextResponse.json({ banned: false })
     }
 
-    const { data: banCheck } = await supabase
+    const { data: banChecks, error: banError } = await supabase
       .from('banned_users')
       .select('expires_at, reason')
       .eq('user_id', user.id)
-      .maybeSingle()
 
-    if (!banCheck) {
+    console.log('Ban check:', { banChecks, banError })
+
+    if (!banChecks || banChecks.length === 0) {
       return NextResponse.json({ banned: false })
     }
 
-    const isPermanentBan = !banCheck.expires_at
-    const isActiveBan = banCheck.expires_at && new Date(banCheck.expires_at) > new Date()
+    // Check if any ban is active
+    const activeBan = banChecks.find(ban => {
+      const isPermanent = !ban.expires_at
+      const isActive = ban.expires_at && new Date(ban.expires_at) > new Date()
+      return isPermanent || isActive
+    })
 
-    if (isPermanentBan || isActiveBan) {
+    if (activeBan) {
+      const isPermanentBan = !activeBan.expires_at
       return NextResponse.json({
         banned: true,
-        reason: banCheck.reason || 'A tua conta foi suspensa.',
+        reason: activeBan.reason || 'A tua conta foi suspensa.',
         permanent: isPermanentBan,
-        expires_at: banCheck.expires_at,
+        expires_at: activeBan.expires_at,
       })
     }
 
