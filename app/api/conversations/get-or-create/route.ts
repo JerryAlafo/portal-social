@@ -14,26 +14,38 @@ export async function GET(request: Request) {
 
     const supabase = createServerClient()
 
-    // Check if conversation exists between these users
-    const { data: existing } = await supabase
+    // Verify the target user exists
+    const { data: targetUser } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .single()
+
+    if (!targetUser) {
+      return NextResponse.json({ error: 'Utilizador não encontrado.' }, { status: 404 })
+    }
+
+    // Find existing conversation where both users are participants
+    const { data: existingConvs } = await supabase
       .from('conversation_participants')
       .select('conversation_id')
       .eq('user_id', session.user.id)
-      .eq('user_id', userId)
 
     let conversationId: string | null = null
 
-    if (existing && existing.length > 0) {
-      conversationId = existing[0].conversation_id
-    } else {
-      // Check the other way
-      const { data: existing2 } = await supabase
+    if (existingConvs && existingConvs.length > 0) {
+      const convIds = existingConvs.map(c => c.conversation_id)
+      
+      // Find conversation where both users participate
+      const { data: bothParts } = await supabase
         .from('conversation_participants')
         .select('conversation_id')
+        .in('conversation_id', convIds)
         .eq('user_id', userId)
+        .maybeSingle()
 
-      if (existing2 && existing2.length > 0) {
-        conversationId = existing2[0].conversation_id
+      if (bothParts) {
+        conversationId = bothParts.conversation_id
       }
     }
 
@@ -46,16 +58,21 @@ export async function GET(request: Request) {
         .single()
 
       if (convError || !newConv) {
+        console.error('Conversation creation error:', convError)
         return NextResponse.json({ error: 'Erro ao criar conversa.' }, { status: 500 })
       }
 
       conversationId = newConv.id
 
       // Add participants
-      await supabase.from('conversation_participants').insert([
+      const { error: partError } = await supabase.from('conversation_participants').insert([
         { conversation_id: conversationId, user_id: session.user.id },
         { conversation_id: conversationId, user_id: userId },
       ])
+
+      if (partError) {
+        console.error('Participant insert error:', partError)
+      }
     }
 
     // Get the other user's info
