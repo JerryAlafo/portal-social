@@ -5,3 +5,8 @@ export async function getFanfics(params?: { fandom?: string; sort?: 'recent' | '
   const { data } = await api.get('/fanfics', { params })
   return data
 }
+
+export async function toggleFanficLike(fanficId: string): Promise<ApiResponse<{ liked: boolean }>> {
+  const { data } = await api.post(`/fanfics/${fanficId}/like`)
+  return data
+}

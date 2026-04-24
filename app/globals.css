@@ -2588,6 +2588,23 @@ button {
   opacity: 0.6;
   cursor: not-allowed;
 }
+.modal-cancel-btn {
+  padding: 8px 24px;
+  background: var(--bg3);
+  color: var(--text2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  margin-right: 8px;
+}
+.modal-cancel-btn:hover {
+  background: var(--bg4);
+  color: var(--text);
+  border-color: var(--border2);
+}
 .modal-loading {
   display: flex;
   align-items: center;

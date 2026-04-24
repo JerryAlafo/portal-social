@@ -10,6 +10,8 @@ export async function GET(request: Request) {
     const sort = searchParams.get('sort') ?? 'recent'
 
     const supabase = createServerClient()
+    const session = await auth()
+    if (!session) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
 
     let query = supabase
       .from('fanfics')
@@ -26,8 +28,19 @@ export async function GET(request: Request) {
 
     if (error) throw error
 
-    return NextResponse.json({ data: data ?? [], error: null })
-  } catch {
+    const fanficIds = data?.map(f => f.id) ?? []
+    const { data: likes } = await supabase
+      .from('fanfic_likes')
+      .select('fanfic_id')
+      .eq('user_id', session.user.id)
+      .in('fanfic_id', fanficIds)
+
+    const likedSet = new Set(likes?.map(l => l.fanfic_id))
+    const fanficsWithLikes = data?.map(f => ({ ...f, liked_by_me: likedSet.has(f.id) })) ?? []
+
+    return NextResponse.json({ data: fanficsWithLikes, error: null })
+  } catch (err) {
+    console.error('Erro ao carregar fanfics:', err)
     return NextResponse.json({ error: 'Erro ao carregar fanfics.' }, { status: 500 })
   }
 }
@@ -39,20 +52,25 @@ export async function POST(request: Request) {
 
     const body = await request.json()
     const title = String(body?.title ?? '').trim()
-    const summary = String(body?.summary ?? '').trim()
+    const synopsis = String(body?.summary ?? '').trim()
     const genre = String(body?.genre ?? '').trim()
     const fandom = String(body?.fandom ?? '').trim()
-    const status = String(body?.status ?? 'Em curso').trim()
+    const statusInput = String(body?.status ?? 'Em curso').trim()
     const chapters = Math.max(1, Number(body?.chapters ?? 1))
-    const words_count = Math.max(100, Number(body?.words_count ?? 100))
-    const attachment_url = body?.attachment_url ? String(body.attachment_url) : null
-    const attachment_name = body?.attachment_name ? String(body.attachment_name) : null
+    const words = Math.max(100, Number(body?.words_count ?? 100))
 
     if (!title) return NextResponse.json({ error: 'Título é obrigatório.' }, { status: 400 })
-    if (!summary) return NextResponse.json({ error: 'Resumo é obrigatório.' }, { status: 400 })
+    if (!synopsis) return NextResponse.json({ error: 'Resumo é obrigatório.' }, { status: 400 })
     if (hitRateLimit(`fanfic:${session.user.id}`, 3, 5 * 60_000)) {
       return NextResponse.json({ error: 'Muitas fanfics criadas em pouco tempo.' }, { status: 429 })
     }
+
+    const statusMap: Record<string, string> = {
+      'Em curso': 'ongoing',
+      'Completo': 'complete',
+      'Pausado': 'hiatus',
+    }
+    const status = statusMap[statusInput] || 'ongoing'
 
     const supabase = createServerClient()
     const { data, error } = await supabase
@@ -60,21 +78,20 @@ export async function POST(request: Request) {
       .insert({
         author_id: session.user.id,
         title,
-        summary,
+        synopsis,
         genre: genre || null,
         fandom: fandom || null,
         status,
         chapters,
-        words_count,
-        attachment_url,
-        attachment_name,
+        words,
       })
       .select('*, author:profiles!fanfics_author_id_fkey(id, username, display_name, avatar_initials, avatar_url)')
       .single()
 
     if (error) throw error
-    return NextResponse.json({ data, error: null }, { status: 201 })
-  } catch {
+    return NextResponse.json({ data: { ...data, liked_by_me: false }, error: null }, { status: 201 })
+  } catch (err) {
+    console.error('Erro ao publicar fanfic:', err)
     return NextResponse.json({ error: 'Erro ao publicar fanfic.' }, { status: 500 })
   }
 }
