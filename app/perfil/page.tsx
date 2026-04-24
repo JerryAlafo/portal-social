@@ -473,7 +473,7 @@ export default function PerfilPage() {
               ) : (
                 fanfics.map(f => (
                   <div key={f.id} className="perfil-fanfic-card">
-                    <div className="perfil-fanfic-genre">Fanfic · {f.fandom} · {f.genre} · {f.chapters} capitulos</div>
+                    <div className="perfil-fanfic-genre">Fanfic · {f.fandom} · {f.genre}</div>
                     <div className="perfil-fanfic-title">{f.title}</div>
                     <p className="perfil-fanfic-desc">{f.synopsis || f.summary || 'Sem resumo ainda.'}</p>
                     <div className="perfil-fanfic-meta">

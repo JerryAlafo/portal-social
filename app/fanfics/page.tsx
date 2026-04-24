@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { BookOpen, Heart, Eye, Clock, Plus, X, Share2 } from 'lucide-react'
+import { Heart, Eye, Clock, Plus, X, Share2 } from 'lucide-react'
 import Topbar from '@/components/layout/Topbar'
 import { useToast } from '@/hooks/useToast'
 import { toggleFanficLike } from '@/services/fanfics'
@@ -64,8 +64,6 @@ export default function FanficsPage() {
     fandom: '',
     genre: '',
     status: 'Em curso',
-    chapters: 1,
-    words: 0,
   })
 
   useEffect(() => {
@@ -179,17 +177,12 @@ export default function FanficsPage() {
   const handleCreateFanfic = async () => {
     if (!newFanfic.title.trim() || !newFanfic.summary.trim() || creating) return
 
-    // Validar campos obrigatórios
     if (!newFanfic.fandom.trim()) {
       showToast('Fandom é obrigatório', 'error')
       return
     }
     if (!newFanfic.genre.trim()) {
       showToast('Género é obrigatório', 'error')
-      return
-    }
-    if (newFanfic.words < 1) {
-      showToast('Número de palavras deve ser pelo menos 1', 'error')
       return
     }
 
@@ -201,8 +194,6 @@ export default function FanficsPage() {
         fandom: newFanfic.fandom.trim(),
         genre: newFanfic.genre.trim(),
         status: newFanfic.status,
-        chapters: newFanfic.chapters,
-        words_count: newFanfic.words,
       }
       const res = await fetch('/api/fanfics', {
         method: 'POST',
@@ -225,8 +216,6 @@ export default function FanficsPage() {
           fandom: '',
           genre: '',
           status: 'Em curso',
-          chapters: 1,
-          words: 0,
         })
       }
     } catch (err) {
@@ -261,10 +250,6 @@ export default function FanficsPage() {
             <option value="Completo">Completo</option>
             <option value="Pausado">Pausado</option>
           </select>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <input className="modal-input" placeholder="Capítulos" type="number" min="1" value={newFanfic.chapters || ''} onChange={(e) => setNewFanfic((p) => ({ ...p, chapters: Math.max(1, parseInt(e.target.value) || 1) }))} />
-            <input className="modal-input" placeholder="Palavras" type="number" min="1" value={newFanfic.words || ''} onChange={(e) => setNewFanfic((p) => ({ ...p, words: Math.max(1, parseInt(e.target.value) || 0) }))} />
-          </div>
         </div>
         <div className="modal-footer">
           <button className="modal-ok-btn" onClick={handleCreateFanfic} disabled={creating}>
@@ -348,8 +333,7 @@ export default function FanficsPage() {
                     </div>
                     <h3 className={styles.cardTitle}>{f.title}</h3>
                     <div className={styles.cardMeta}>
-                      <span><BookOpen size={13} /> {f.chapters} cap.</span>
-                      <span>{f.words.toLocaleString()} palavras</span>
+                      <span>{(f.words ?? 0).toLocaleString()} palavras</span>
                       <span><Eye size={13} /> {fmt(f.reads_count)}</span>
                       <span><Clock size={13} /> {formatDate(f.updated_at)}</span>
                     </div>
@@ -412,8 +396,7 @@ export default function FanficsPage() {
                 </span>
               </div>
               <div style={{ display: 'flex', gap: 16, fontSize: 14, color: 'var(--text3)', marginBottom: 16 }}>
-                <span><BookOpen size={14} style={{ marginRight: 4 }} />{showReadModal.chapters} capítulos</span>
-                <span>{showReadModal.words.toLocaleString()} palavras</span>
+                <span>{(showReadModal.words ?? 0).toLocaleString()} palavras</span>
                 <span><Eye size={14} style={{ marginRight: 4 }} />{fmt(showReadModal.reads_count)} leituras</span>
               </div>
             </div>

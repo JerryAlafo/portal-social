@@ -56,14 +56,14 @@ export async function POST(request: Request) {
     const genre = String(body?.genre ?? '').trim()
     const fandom = String(body?.fandom ?? '').trim()
     const statusInput = String(body?.status ?? 'Em curso').trim()
-    const chapters = Math.max(1, Number(body?.chapters ?? 1))
-    const words = Math.max(100, Number(body?.words_count ?? 100))
 
     if (!title) return NextResponse.json({ error: 'Título é obrigatório.' }, { status: 400 })
     if (!synopsis) return NextResponse.json({ error: 'Resumo é obrigatório.' }, { status: 400 })
     if (hitRateLimit(`fanfic:${session.user.id}`, 3, 5 * 60_000)) {
       return NextResponse.json({ error: 'Muitas fanfics criadas em pouco tempo.' }, { status: 429 })
     }
+
+    const wordCount = synopsis.trim().split(/\s+/).filter(Boolean).length
 
     const statusMap: Record<string, string> = {
       'Em curso': 'ongoing',
@@ -82,8 +82,8 @@ export async function POST(request: Request) {
         genre: genre || null,
         fandom: fandom || null,
         status,
-        chapters,
-        words,
+        chapters: 1,
+        words: wordCount,
       })
       .select('*, author:profiles!fanfics_author_id_fkey(id, username, display_name, avatar_initials, avatar_url)')
       .single()
