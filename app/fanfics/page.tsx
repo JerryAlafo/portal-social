@@ -253,7 +253,7 @@ export default function FanficsPage() {
         </div>
         <div className="modal-body" style={{ padding: 16, display: 'grid', gap: 12 }}>
           <input className="modal-input" placeholder="Título da fanfic" value={newFanfic.title} onChange={(e) => setNewFanfic((p) => ({ ...p, title: e.target.value }))} />
-          <textarea className="modal-textarea" placeholder="Conte a história (máximo 500 caracteres)" value={newFanfic.summary} onChange={(e) => setNewFanfic((p) => ({ ...p, summary: e.target.value }))} rows={4} maxLength={500} />
+          <textarea className="modal-textarea" placeholder="Conte a história" value={newFanfic.summary} onChange={(e) => setNewFanfic((p) => ({ ...p, summary: e.target.value }))} rows={8} maxLength={6000} />
           <input className="modal-input" placeholder="Fandom (ex: Naruto, Harry Potter)" value={newFanfic.fandom} onChange={(e) => setNewFanfic((p) => ({ ...p, fandom: e.target.value }))} />
           <input className="modal-input" placeholder="Género (ex: Romance, Aventura)" value={newFanfic.genre} onChange={(e) => setNewFanfic((p) => ({ ...p, genre: e.target.value }))} />
           <select className="modal-input" value={newFanfic.status} onChange={(e) => setNewFanfic((p) => ({ ...p, status: e.target.value }))}>
@@ -395,7 +395,7 @@ export default function FanficsPage() {
     {CreateModal}
     {showReadModal && (
       <div className="modal-overlay" onClick={() => setShowReadModal(null)}>
-        <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 600 }}>
+        <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 700, maxHeight: '85vh' }}>
           <div className="modal-header">
             <h3>{showReadModal.title}</h3>
             <button className="modal-close" onClick={() => setShowReadModal(null)}>
@@ -424,13 +424,6 @@ export default function FanficsPage() {
           <div className="modal-footer">
             <button className="modal-cancel-btn" onClick={() => setShowReadModal(null)}>
               Fechar
-            </button>
-            <button className="modal-ok-btn" onClick={() => {
-              setShowReadModal(null)
-              // TODO: Navigate to full reading page when implemented
-              showToast('Página completa em breve!', 'info')
-            }}>
-              Ler capítulo completo
             </button>
           </div>
         </div>
