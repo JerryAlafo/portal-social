@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
-import { MapPin, Link2, Calendar, MoreHorizontal, Share2, Edit3, Loader2, Check } from 'lucide-react'
+import { MapPin, Link2, Calendar, MoreHorizontal, Share2, Edit3, Loader2, Check, X } from 'lucide-react'
 import Topbar from '@/components/layout/Topbar'
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll'
 import { uploadImage } from '@/services/upload'
@@ -55,6 +55,14 @@ interface GalleryItem {
   created_at: string
 }
 
+interface SimpleUser {
+  id: string
+  username: string
+  display_name: string
+  avatar_initials: string
+  avatar_url: string | null
+}
+
 interface Profile {
   id: string
   username: string
@@ -97,6 +105,47 @@ function getRoleBadge(role: string) {
   return null
 }
 
+interface UserListModalProps {
+  type: 'followers' | 'following'
+  users: SimpleUser[]
+  loading: boolean
+  onClose: () => void
+}
+
+function UserListModal({ type, users, loading, onClose }: UserListModalProps) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>{type === 'followers' ? 'Seguidores' : 'A seguir'}</h3>
+          <button className="modal-close" onClick={onClose}><X size={18} /></button>
+        </div>
+        <div className="modal-body">
+          {loading ? (
+            <div className="modal-loading"><Loader2 size={20} className="spin" /></div>
+          ) : users.length === 0 ? (
+            <p className="modal-empty">Ninguém aqui ainda.</p>
+          ) : (
+            users.map(user => (
+              <Link key={user.id} href={`/perfil/${user.username}`} className="user-list-item" onClick={onClose}>
+                <div className="user-list-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
+                  {user.avatar_url
+                    ? <img src={user.avatar_url} alt={user.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                    : user.avatar_initials}
+                </div>
+                <div className="user-list-info">
+                  <span className="user-list-name">{user.display_name}</span>
+                  <span className="user-list-handle">@{user.username}</span>
+                </div>
+              </Link>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function PerfilPage() {
   const { data: session, update: updateSession } = useSession()
   const [activeTab, setActiveTab] = useState('Publicacoes')
@@ -113,6 +162,12 @@ export default function PerfilPage() {
   const [showFeatureModal, setShowFeatureModal] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [uploadingBanner, setUploadingBanner] = useState(false)
+  const [showFollowersModal, setShowFollowersModal] = useState(false)
+  const [showFollowingModal, setShowFollowingModal] = useState(false)
+  const [followersList, setFollowersList] = useState<SimpleUser[]>([])
+  const [followingList, setFollowingList] = useState<SimpleUser[]>([])
+  const [loadingFollowers, setLoadingFollowers] = useState(false)
+  const [loadingFollowing, setLoadingFollowing] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const bannerInputRef = useRef<HTMLInputElement>(null)
 
@@ -257,6 +312,38 @@ export default function PerfilPage() {
     }
   }
 
+  const loadFollowers = async () => {
+    if (!profile) return
+    setLoadingFollowers(true)
+    try {
+      const res = await fetch(`/api/users/${profile.id}/followers`)
+      const json = await res.json()
+      setFollowersList(json.data || [])
+    } catch { setFollowersList([]) }
+    finally { setLoadingFollowers(false) }
+  }
+
+  const loadFollowing = async () => {
+    if (!profile) return
+    setLoadingFollowing(true)
+    try {
+      const res = await fetch(`/api/users/${profile.id}/following`)
+      const json = await res.json()
+      setFollowingList(json.data || [])
+    } catch { setFollowingList([]) }
+    finally { setLoadingFollowing(false) }
+  }
+
+  const openFollowersModal = () => {
+    loadFollowers()
+    setShowFollowersModal(true)
+  }
+
+  const openFollowingModal = () => {
+    loadFollowing()
+    setShowFollowingModal(true)
+  }
+
   if (!session) {
     return (
       <div className="perfil-page">
@@ -374,14 +461,14 @@ export default function PerfilPage() {
                 <span className="perfil-stat-num">{fmt(profile?.posts_count || 0)}</span>
                 <span className="perfil-stat-label">Publicacoes</span>
               </div>
-              <div className="perfil-stat">
+              <button className="perfil-stat perfil-stat-clickable" onClick={openFollowersModal}>
                 <span className="perfil-stat-num">{fmt(profile?.followers_count || 0)}</span>
                 <span className="perfil-stat-label">Seguidores</span>
-              </div>
-              <div className="perfil-stat">
+              </button>
+              <button className="perfil-stat perfil-stat-clickable" onClick={openFollowingModal}>
                 <span className="perfil-stat-num">{fmt(profile?.following_count || 0)}</span>
                 <span className="perfil-stat-label">A seguir</span>
-              </div>
+              </button>
               <div className="perfil-stat">
                 <span className="perfil-stat-num">{fmt(profile?.likes_received_count || 0)}</span>
                 <span className="perfil-stat-label">Gostos recebidos</span>
@@ -551,6 +638,22 @@ export default function PerfilPage() {
       onClose={() => setShowFeatureModal(false)}
       hint="Esta ação adicional do perfil ainda está em desenvolvimento."
     />
+    {showFollowersModal && (
+      <UserListModal
+        type="followers"
+        users={followersList}
+        loading={loadingFollowers}
+        onClose={() => setShowFollowersModal(false)}
+      />
+    )}
+    {showFollowingModal && (
+      <UserListModal
+        type="following"
+        users={followingList}
+        loading={loadingFollowing}
+        onClose={() => setShowFollowingModal(false)}
+      />
+    )}
     </>
   )
 }
