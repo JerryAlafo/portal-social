@@ -215,13 +215,16 @@ export default function AdminPage() {
   const [errorModal, setErrorModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
   const [loadingModal, setLoadingModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
   const [banningUserId, setBanningUserId] = useState<string | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [userSearch, setUserSearch] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState('all');
 
   useEffect(() => {
     async function fetchData() {
       try {
         const [dashboardRes, usersRes] = await Promise.all([
           fetch('/api/admin/dashboard'),
-          fetch('/api/admin/users'),
+          fetch(`/api/admin/users?search=${encodeURIComponent(userSearch)}&role=${userRoleFilter}`),
         ]);
 
         if (!usersRes.ok) {
@@ -269,8 +272,7 @@ export default function AdminPage() {
               posts: formatPostsCount(u.posts_count),
               since: formatDate(u.created_at),
             };
-          });
-
+});
           setUsers(mapped);
           setTotalMembers(usersJson.data?.total || 0);
         }
@@ -282,7 +284,7 @@ export default function AdminPage() {
     }
 
     fetchData();
-  }, [router]);
+  }, [router, userSearch, userRoleFilter]);
 
   useEffect(() => {
     async function fetchEvents() {
@@ -515,6 +517,35 @@ export default function AdminPage() {
             }
           },
         });
+      },
+    });
+  };
+
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    setConfirmModal({
+      show: true,
+      title: 'Eliminar Conta',
+      message: `Tens a certeza que queres eliminar permanentemente a conta de ${userName}? Esta acção é irreversível.`,
+      onConfirm: async () => {
+        setConfirmModal({ show: false, title: '', message: '', onConfirm: () => {} });
+        setDeletingUserId(userId);
+        setLoadingModal({ show: true, message: 'A eliminar conta...' });
+        try {
+          const res = await fetch(`/api/admin/users/${userId}/delete`, { method: 'DELETE' });
+          setLoadingModal({ show: false, message: '' });
+          if (res.ok) {
+            setUsers(prev => prev.filter(u => u.id !== userId));
+            setSuccessModal({ show: true, message: 'Conta eliminada com sucesso' });
+          } else {
+            const data = await res.json();
+            setErrorModal({ show: true, message: data.error || 'Erro ao eliminar conta' });
+          }
+        } catch {
+          setLoadingModal({ show: false, message: '' });
+          setErrorModal({ show: true, message: 'Erro ao comunicar com o servidor' });
+        } finally {
+          setDeletingUserId(null);
+        }
       },
     });
   };
@@ -960,6 +991,25 @@ export default function AdminPage() {
             </span>
             <span className={styles.badgeAmber}>{formatStatNumber(totalMembers)} membros</span>
           </div>
+          <div className={styles.userFilters}>
+            <input
+              type="text"
+              placeholder="Pesquisar membros..."
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+              className={styles.searchInput}
+            />
+            <select
+              value={userRoleFilter}
+              onChange={(e) => setUserRoleFilter(e.target.value)}
+              className={styles.filterSelect}
+            >
+              <option value="all">Todos</option>
+              <option value="superuser">Superusers</option>
+              <option value="mod">Mods</option>
+              <option value="member">Membros</option>
+            </select>
+          </div>
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
@@ -1033,6 +1083,9 @@ export default function AdminPage() {
                           )}
                           <button className={styles.btnBan} onClick={() => handleBanUser(u.id, u.name)} disabled={banningUserId === u.id}>
                                 {banningUserId === u.id ? <Loader2 size={12} className="animate-spin" /> : "Ban"}
+                              </button>
+                              <button className={styles.btnDelete} onClick={() => handleDeleteUser(u.id, u.name)} disabled={deletingUserId === u.id} style={{ marginLeft: 4 }}>
+                                {deletingUserId === u.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
                               </button>
                         </div>
                       )}

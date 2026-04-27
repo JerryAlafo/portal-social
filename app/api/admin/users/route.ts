@@ -11,8 +11,9 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '50')
+    const limit = parseInt(searchParams.get('limit') || '1000')
     const role = searchParams.get('role')
+    const search = searchParams.get('search')
 
     const supabase = createServerClient()
 
@@ -34,6 +35,10 @@ export async function GET(request: Request) {
 
     if (role && role !== 'all') {
       query = query.eq('role', role)
+    }
+
+    if (search) {
+      query = query.or(`username.ilike.%${search}%,display_name.ilike.%${search}%`)
     }
 
     const { data: users, error, count } = await query
