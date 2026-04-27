@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showRegisterSuccess, setShowRegisterSuccess] = useState(false)
   const [turnstileToken, setTurnstileToken] = useState<string>('')
   const [turnstileResetSignal, setTurnstileResetSignal] = useState(0)
   const turnstileWaiterRef = useRef<{ resolve: ((token: string) => void) | null }>({ resolve: null })
@@ -33,7 +34,8 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
 
-    if (!turnstileToken) {
+    // Turnstile is only required for login mode
+    if (mode === 'login' && !turnstileToken) {
       setError('Por favor, verifica que não és um robô.')
       setLoading(false)
       return
@@ -83,16 +85,13 @@ export default function LoginPage() {
           redirect: false,
           email: values.email,
           password: values.password,
-          turnstileToken,
         })
-      } catch {
-        setError('Erro ao autenticar após registo.')
-        setLoading(false)
-        return
+      } catch (err: any) {
+        console.error('SignIn error:', err)
       }
 
-      if (!signInResult || signInResult.error || signInResult.ok === false) {
-        setError('Erro ao autenticar após registo.')
+      if (!signInResult || signInResult.ok === false) {
+        setShowRegisterSuccess(true)
         setLoading(false)
         return
       }
@@ -242,19 +241,53 @@ export default function LoginPage() {
 
             {error && <p className="login-error">{error}</p>}
 
-<Turnstile
-              siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''}
-              onVerify={(token) => {
-                setTurnstileToken(token)
-                turnstileWaiterRef.current.resolve?.(token)
+            <button
+              type="button"
+              className="login-google"
+              disabled={mode === 'login' && !turnstileToken}
+              onClick={() => {
+                setError('')
+                signIn('google', { 
+                  callbackUrl: '/feed'
+                })
               }}
-              onExpire={() => setTurnstileToken('')}
-              theme="auto"
-              size="normal"
-              resetSignal={turnstileResetSignal}
-            />
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.83 20.42 7.73 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.73 1 3.83 3.58 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              {mode === 'login' ? 'Entrar com Google' : 'Registar com Google'}
+            </button>
 
-            <button type="submit" className="login-submit" disabled={loading || !turnstileToken}>
+            {mode === 'login' && (
+              <>
+                <div className="login-divider">
+                  <span>ou</span>
+                </div>
+
+                <Turnstile
+                  siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''}
+                  onVerify={(token) => {
+                    setTurnstileToken(token)
+                    turnstileWaiterRef.current.resolve?.(token)
+                  }}
+                  onExpire={() => setTurnstileToken('')}
+                  theme="auto"
+                  size="normal"
+                  resetSignal={turnstileResetSignal}
+                />
+              </>
+            )}
+
+            {mode === 'register' && (
+              <div className="login-divider">
+                <span>ou</span>
+              </div>
+            )}
+
+            <button type="submit" className="login-submit" disabled={loading || (mode === 'login' && !turnstileToken)}>
               {loading ? (
                 <span className="login-spinner" />
               ) : mode === 'login' ? (
@@ -271,7 +304,20 @@ export default function LoginPage() {
               <button type="button" className="login-switch" onClick={() => setMode('register')}>
                 Regista-te
               </button>
-            </p>
+</p>
+          )}
+
+          {showRegisterSuccess && (
+            <div className="login-success-modal">
+              <div className="login-success-content">
+                <div className="login-success-icon">✓</div>
+                <h3>Conta criada com sucesso!</h3>
+                <p>Podes agora iniciar sessão com as tuas credenciais.</p>
+                <button onClick={() => { setShowRegisterSuccess(false); setMode('login'); setValues({ email: '', password: '', confirmPassword: '', username: '', displayName: '' }) }}>
+                  Ir para Entrar
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>

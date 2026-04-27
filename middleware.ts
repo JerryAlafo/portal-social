@@ -5,7 +5,7 @@ import type { NextRequest } from 'next/server'
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|banned|logout|.*\\..*).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|banned|logout|onboarding|.*\\..*).*)',
   ],
 }
 
@@ -34,6 +34,7 @@ export async function middleware(request: NextRequest) {
   const isRootPage = request.nextUrl.pathname === '/'
   const isBannedPage = request.nextUrl.pathname === '/banned'
   const isLogoutPage = request.nextUrl.pathname === '/logout'
+  const isOnboardingPage = request.nextUrl.pathname === '/onboarding'
 
   if (isAuthPage && isLoggedIn) {
     return NextResponse.redirect(new URL('/feed', request.url))
@@ -53,6 +54,17 @@ export async function middleware(request: NextRequest) {
     if (banned) {
       return NextResponse.redirect(new URL('/banned', request.url))
     }
+  }
+
+  // Check if user needs onboarding (no username set)
+  if (isLoggedIn && !isOnboardingPage && session?.user?.username) {
+    // User has username, allow access
+    return NextResponse.next()
+  }
+
+  if (isLoggedIn && !isOnboardingPage && !session?.user?.username) {
+    // User doesn't have username, redirect to onboarding
+    return NextResponse.redirect(new URL('/onboarding', request.url))
   }
 
   return NextResponse.next()

@@ -124,5 +124,18 @@
 @media (max-width: 768px) {
   .body { flex-direction: column; overflow-y: auto; overflow-x: hidden; }
   .nav { width: 100%; border-right: none; border-bottom: 1px solid var(--border); flex-direction: row; flex-wrap: wrap; gap: 4px; padding: 12px; overflow-y: visible; }
-  .navItem { width: auto; flex: 1; min-width: 120px; justify-content: center; }
+  .navItem { width: auto; flex: 1; min-width: 80px; justify-content: center; font-size: 13px; padding: 8px 10px; }
+
+  .content { padding: 20px 16px; }
+  .fieldRow { grid-template-columns: 1fr; gap: 0; }
+  .avatarSection { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .bigAvatar { width: 60px; height: 60px; font-size: 20px; }
+  .themeOptions { flex-wrap: wrap; }
+  .themeOption { flex: 1; min-width: 80px; padding: 10px 12px; }
+  .sizeOptions { flex-wrap: wrap; }
+  .sizeBtn { flex: 1; text-align: center; }
+  .toggleItem { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .dangerItem { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .dangerBtn { width: 100%; text-align: center; }
+  .saveBtn { width: 100%; justify-content: center; }
 }

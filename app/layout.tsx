@@ -21,7 +21,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt" data-theme="dark" suppressHydrationWarning>
-      <head>
+      <body>
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -36,8 +36,8 @@ export default function RootLayout({
             `,
           }}
         />
-      </head>
-      <body>{children}</body>
+        {children}
+      </body>
     </html>
   );
 }
