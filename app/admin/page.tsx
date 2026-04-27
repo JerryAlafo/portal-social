@@ -533,14 +533,16 @@ export default function AdminPage() {
         try {
           const res = await fetch(`/api/admin/users/${userId}/delete`, { method: 'DELETE' });
           setLoadingModal({ show: false, message: '' });
+          const data = await res.json();
+          console.log('[DELETE USER] Response:', res.status, data);
           if (res.ok) {
             setUsers(prev => prev.filter(u => u.id !== userId));
             setSuccessModal({ show: true, message: 'Conta eliminada com sucesso' });
           } else {
-            const data = await res.json();
             setErrorModal({ show: true, message: data.error || 'Erro ao eliminar conta' });
           }
-        } catch {
+        } catch (err) {
+          console.log('[DELETE USER] Fetch error:', err);
           setLoadingModal({ show: false, message: '' });
           setErrorModal({ show: true, message: 'Erro ao comunicar com o servidor' });
         } finally {
