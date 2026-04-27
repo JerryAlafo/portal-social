@@ -66,7 +66,6 @@ export default function LoginPage() {
           password: values.password,
           username: values.username.trim(),
           display_name: values.displayName.trim(),
-          turnstileToken,
         }),
       })
 
@@ -78,32 +77,13 @@ export default function LoginPage() {
         return
       }
 
-      // Turnstile tokens are single-use. After registering, we must get a fresh token before signing in.
-      setTurnstileToken('')
-      setTurnstileResetSignal((n) => n + 1)
-
-      const freshToken = await new Promise<string>((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('turnstile_timeout')), 15_000)
-        turnstileWaiterRef.current.resolve = (token) => {
-          clearTimeout(timeout)
-          turnstileWaiterRef.current.resolve = null
-          resolve(token)
-        }
-      }).catch(() => '')
-
-      if (!freshToken) {
-        setError('Confirma o anti-bot novamente para entrar.')
-        setLoading(false)
-        return
-      }
-
       let signInResult
       try {
         signInResult = await signIn('credentials', {
           redirect: false,
           email: values.email,
           password: values.password,
-          turnstileToken: freshToken,
+          turnstileToken,
         })
       } catch {
         setError('Erro ao autenticar após registo.')
@@ -262,7 +242,7 @@ export default function LoginPage() {
 
             {error && <p className="login-error">{error}</p>}
 
-            <Turnstile
+<Turnstile
               siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''}
               onVerify={(token) => {
                 setTurnstileToken(token)

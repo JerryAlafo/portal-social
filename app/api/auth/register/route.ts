@@ -1,32 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
-import { verifyTurnstileToken } from '@/lib/turnstile'
 
 export async function POST(request: NextRequest) {
   const body = await request.json()
-  const { email, password, username, display_name, turnstileToken } = body ?? {}
+  const { email, password, username, display_name } = body ?? {}
 
   if (!email || !password || !username || !display_name) {
     return NextResponse.json(
       { error: 'Todos os campos são obrigatórios.' },
       { status: 400 }
-    )
-  }
-
-  if (!turnstileToken || typeof turnstileToken !== 'string') {
-    return NextResponse.json(
-      { error: 'Validação anti-bot obrigatória.' },
-      { status: 400 }
-    )
-  }
-
-  const forwardedFor = request.headers.get('x-forwarded-for')
-  const remoteIp = forwardedFor?.split(',')[0]?.trim() || null
-  const isTurnstileValid = await verifyTurnstileToken(turnstileToken, remoteIp)
-  if (!isTurnstileValid) {
-    return NextResponse.json(
-      { error: 'Falha na validação anti-bot.' },
-      { status: 403 }
     )
   }
 
