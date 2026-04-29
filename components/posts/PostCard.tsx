@@ -1,17 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { Heart, MessageCircle, Share2, MoreHorizontal, Send, Loader2, Check, Copy, Trash2, Pencil, Reply, X, AlertTriangle } from 'lucide-react'
 import type { Post, Comment } from '@/types'
 import { getComments, addComment, editComment, deleteComment, likeComment } from '@/services/comments'
+import { reportPost } from '@/services/posts'
 import styles from './PostCard.module.css'
 
 interface PostCardProps {
   post: Post
   onDelete?: (id: string) => void
   onLike?: (id: string) => void
+  onReport?: (id: string) => void
 }
 
 function timeAgo(dateStr: string) {
@@ -135,7 +138,7 @@ function CommentItem({ comment, myId, myRole, onDelete, onEdit, onLike, onReply,
   )
 }
 
-export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
+export default function PostCard({ post, onDelete, onLike, onReport }: PostCardProps) {
   const { data: session } = useSession()
 
   const [menuOpen, setMenuOpen] = useState(false)
@@ -151,6 +154,20 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [replies, setReplies] = useState<Record<string, Comment[]>>({})
   const [loadingReplies, setLoadingReplies] = useState(false)
+  const [reportModalOpen, setReportModalOpen] = useState(false)
+  const [reportReason, setReportReason] = useState<string>('')
+  const [reportDescription, setReportDescription] = useState('')
+  const [reportSubmitting, setReportSubmitting] = useState(false)
+  const [showReportSuccess, setShowReportSuccess] = useState(false)
+  const [showReportError, setShowReportError] = useState(false)
+  const [reportError, setReportError] = useState<string>('')
+
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null)
+  const moreBtnRef = useRef<HTMLButtonElement>(null)
+  const menuPortalRef = useRef<HTMLDivElement>(null)
+  const reportModalRef = useRef<HTMLDivElement>(null)
+  const reportSuccessRef = useRef<HTMLDivElement>(null)
+  const reportErrorRef = useRef<HTMLDivElement>(null)
 
   const myInitials = session?.user?.avatar_initials
     || session?.user?.name?.slice(0, 2).toUpperCase()
@@ -160,6 +177,66 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
   const myRole = (session?.user as { role?: string })?.role ?? ''
   const isSpoiler = Boolean((post as Post).is_spoiler)
   const canReveal = !isSpoiler || spoilerRevealed
+
+  const openMenu = useCallback(() => {
+    if (moreBtnRef.current) {
+      const rect = moreBtnRef.current.getBoundingClientRect()
+      setMenuPosition({ top: rect.bottom + 4, left: rect.right - 155 })
+      setMenuOpen(true)
+    }
+  }, [])
+
+  const closeMenu = useCallback(() => {
+    setMenuOpen(false)
+    setMenuPosition(null)
+  }, [])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const handleClick = (e: MouseEvent) => {
+      if (
+        moreBtnRef.current && !moreBtnRef.current.contains(e.target as Node) &&
+        menuPortalRef.current && !menuPortalRef.current.contains(e.target as Node)
+      ) {
+        closeMenu()
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [menuOpen, closeMenu])
+
+  useEffect(() => {
+    if (!reportModalOpen) return
+    const handleClick = (e: MouseEvent) => {
+      if (reportModalRef.current && !reportModalRef.current.contains(e.target as Node)) {
+        setReportModalOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [reportModalOpen])
+
+  useEffect(() => {
+    if (!showReportSuccess) return
+    const handleClick = (e: MouseEvent) => {
+      if (reportSuccessRef.current && !reportSuccessRef.current.contains(e.target as Node)) {
+        setShowReportSuccess(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showReportSuccess])
+
+  useEffect(() => {
+    if (!showReportError) return
+    const handleClick = (e: MouseEvent) => {
+      if (reportErrorRef.current && !reportErrorRef.current.contains(e.target as Node)) {
+        setShowReportError(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showReportError])
 
   const handleToggleComments = async () => {
     const next = !commentsOpen
@@ -262,7 +339,6 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
   }
 
   const handleShare = async () => {
-    setMenuOpen(false)
     const url = `${window.location.origin}/post/${post.id}`
 
     if (navigator.share) {
@@ -282,6 +358,35 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
     fetch(`/api/posts/${post.id}/share`, { method: 'POST' })
       .then(() => setShareCount(n => n + 1))
       .catch(() => { /* non-critical */ })
+  }
+
+  const handleOpenReport = () => {
+    closeMenu()
+    setReportModalOpen(true)
+    setReportReason('')
+    setReportDescription('')
+  }
+
+  const handleSubmitReport = async () => {
+    if (!reportReason || reportSubmitting) return
+    setReportSubmitting(true)
+    try {
+      const res = await reportPost(post.id, reportReason, reportDescription || undefined)
+      setReportModalOpen(false)
+      if (res.error) {
+        setReportError(res.error)
+        setShowReportError(true)
+      } else {
+        onReport?.(post.id)
+        setShowReportSuccess(true)
+      }
+    } catch {
+      setReportModalOpen(false)
+      setReportError('Erro ao enviar denúncia.')
+      setShowReportError(true)
+    } finally {
+      setReportSubmitting(false)
+    }
   }
 
   const replyingToComment = replyingTo ? comments.find(c => c.id === replyingTo) : null
@@ -314,28 +419,28 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
         </div>
 
         <div className={styles.moreWrap}>
-          <button className={styles.moreBtn} onClick={() => setMenuOpen(m => !m)}>
+          <button ref={moreBtnRef} className={styles.moreBtn} onClick={openMenu}>
             <MoreHorizontal size={16} />
           </button>
-          {menuOpen && (
-            <div className={styles.menu}>
-              <button className={styles.menuItem} onClick={handleShare}>
+          {menuOpen && typeof document !== 'undefined' && createPortal(
+            <div ref={menuPortalRef} className={styles.menu} style={{ top: menuPosition?.top, left: menuPosition?.left }}>
+              <button className={styles.menuItem} onClick={() => { handleShare(); closeMenu() }}>
                 <Share2 size={13} /> Partilhar
               </button>
-              <button className={styles.menuItem} onClick={handleShare}>
+              <button className={styles.menuItem} onClick={() => { handleShare(); closeMenu() }}>
                 <Copy size={13} /> Copiar link
               </button>
-              <button className={styles.menuItem}>Guardar</button>
-              <button className={styles.menuItem}>Denunciar</button>
+              <button className={styles.menuItem} onClick={handleOpenReport}>Denunciar</button>
               {onDelete && (
                 <button
                   className={`${styles.menuItem} ${styles.menuDanger}`}
-                  onClick={() => { onDelete(post.id); setMenuOpen(false) }}
+                  onClick={() => { onDelete(post.id); closeMenu() }}
                 >
                   <Trash2 size={13} /> Apagar post
                 </button>
               )}
-            </div>
+            </div>,
+            document.body
           )}
         </div>
       </div>
@@ -465,6 +570,89 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
             </button>
           </div>
         </div>
+      )}
+
+      {reportModalOpen && typeof document !== 'undefined' && createPortal(
+        <div ref={reportModalRef} className={styles.reportModalOverlay} onClick={() => setReportModalOpen(false)}>
+          <div className={styles.reportModal} onClick={e => e.stopPropagation()}>
+            <div className={styles.reportModalHeader}>
+              <h3>Denunciar publicação</h3>
+              <button className={styles.reportModalClose} onClick={() => setReportModalOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className={styles.reportReasons}>
+              {[
+                { value: 'spam', label: 'Spam' },
+                { value: 'explicit', label: 'Conteúdo explícito' },
+                { value: 'harassment', label: 'Assédio' },
+                { value: 'other', label: 'Outro' },
+              ].map(r => (
+                <button
+                  key={r.value}
+                  className={`${styles.reportReasonBtn} ${reportReason === r.value ? styles.reportReasonBtnActive : ''}`}
+                  onClick={() => setReportReason(r.value)}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+
+            {reportReason && (
+              <textarea
+                className={styles.reportDescription}
+                placeholder="Descreve o motivo da denúncia (opcional)"
+                value={reportDescription}
+                onChange={e => setReportDescription(e.target.value)}
+                maxLength={500}
+                rows={3}
+              />
+            )}
+
+            <div className={styles.reportModalActions}>
+              <button className={styles.reportCancelBtn} onClick={() => setReportModalOpen(false)}>
+                Cancelar
+              </button>
+              <button
+                className={styles.reportSubmitBtn}
+                onClick={handleSubmitReport}
+                disabled={!reportReason || reportSubmitting}
+              >
+                {reportSubmitting ? <Loader2 size={14} className="spin" /> : 'Enviar denúncia'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {showReportSuccess && typeof document !== 'undefined' && createPortal(
+        <div ref={reportSuccessRef} className={styles.reportModalOverlay} onClick={() => setShowReportSuccess(false)}>
+          <div className={styles.reportResultModal} onClick={e => e.stopPropagation()}>
+            <div className={styles.reportResultIcon}>
+              <Check size={32} color="var(--green)" />
+            </div>
+            <h3>Denúncia enviada</h3>
+            <p>A tua denúncia foi registada com sucesso.</p>
+            <button className={styles.reportResultBtn} onClick={() => setShowReportSuccess(false)}>OK</button>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {showReportError && typeof document !== 'undefined' && createPortal(
+        <div ref={reportErrorRef} className={styles.reportModalOverlay} onClick={() => setShowReportError(false)}>
+          <div className={styles.reportResultModal} onClick={e => e.stopPropagation()}>
+            <div className={styles.reportResultIcon}>
+              <X size={32} color="var(--red)" />
+            </div>
+            <h3>Erro na denúncia</h3>
+            <p>{reportError}</p>
+            <button className={styles.reportResultBtn} onClick={() => setShowReportError(false)}>OK</button>
+          </div>
+        </div>,
+        document.body
       )}
     </article>
   )

@@ -38,3 +38,14 @@ export async function toggleLike(postId: string): Promise<ApiResponse<{ liked: b
   const { data } = await api.post(`/posts/${postId}/like`)
   return data
 }
+
+export async function reportPost(postId: string, reason: string, description?: string): Promise<ApiResponse<null>> {
+  try {
+    const { data } = await api.post(`/posts/${postId}/report`, { reason, description })
+    return data
+  } catch (err) {
+    const axiosErr = err as AxiosError<{ error?: string }>
+    const message = axiosErr.response?.data?.error || 'Erro ao denunciar publicação.'
+    return { data: null, error: message }
+  }
+}

@@ -39,11 +39,13 @@
 .reportInfo { flex: 1; min-width: 0; }
 .reportName { font-size: 13px; font-weight: 600; color: var(--text); font-family: var(--font-display); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .reportText { font-size: 12px; color: var(--text2); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reportPostContent { font-size: 11px; color: var(--text3); margin-top: 4px; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .reportMeta { font-size: 11px; color: var(--text3); margin-top: 3px; }
 .reportBadge { padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; font-family: var(--font-display); }
 .badge_spam       { background: var(--amber-bg); color: var(--amber); }
 .badge_explicit   { background: var(--red-bg); color: var(--red); }
 .badge_harassment { background: rgba(232,121,249,0.12); color: var(--pink); }
+.badge_other      { background: var(--bg4); color: var(--text3); }
 
 .reportActions { display: flex; flex-direction: column; gap: 5px; }
 .btnDelete, .btnWarn, .btnKeep {

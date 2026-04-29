@@ -27,8 +27,23 @@ export async function GET() {
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
     const [reports, totalReports, announcements, totalAnnouncements, postsToday, dailyPosts, dailyLabels, reportsLast24h, monthlyRaw, categoriesRaw] = await Promise.all([
-      supabase.from('reported_posts').select('id, post_id, reporter_id, reason, created_at').order('created_at', { ascending: false }).limit(20),
-      supabase.from('reported_posts').select('*', { count: 'exact', head: true }),
+      supabase
+        .from('reported_posts')
+        .select(`
+          id,
+          post_id,
+          reporter_id,
+          reason,
+          description,
+          status,
+          created_at,
+          reporter:profiles!reported_posts_reporter_id_fkey(username, display_name, avatar_initials),
+          post:posts!reported_posts_post_id_fkey(id, content, author_id, author:profiles!posts_author_id_fkey(username, display_name))
+        `)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(20),
+      supabase.from('reported_posts').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
       supabase.from('announcements').select('id, title, content, status, created_at, pinned').order('created_at', { ascending: false }).limit(10),
       supabase.from('announcements').select('*', { count: 'exact', head: true }),
       supabase.from('posts').select('*', { count: 'exact', head: true }).gte('created_at', now.toISOString().slice(0, 10)),
@@ -44,7 +59,7 @@ export async function GET() {
           return WEEKDAYS_PT[date.getDay()] || ''
         }),
       ),
-      supabase.from('reported_posts').select('*', { count: 'exact', head: true }).gte('created_at', new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()),
+      supabase.from('reported_posts').select('*', { count: 'exact', head: true }).eq('status', 'pending').gte('created_at', new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()),
       supabase.from('posts').select('created_at').gte('created_at', thirtyDaysAgo.toISOString()),
       supabase.from('posts').select('category').gte('created_at', thirtyDaysAgo.toISOString()),
     ])

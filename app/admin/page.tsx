@@ -27,7 +27,7 @@ import styles from "./page.module.css";
 import { ConfirmModal, PromptModal, LoadingModal, SuccessModal, ErrorModal } from "./components/AdminModals";
 import { ActivityChart, CategoryBars } from "./components/AdminCharts";
 
-type ReportBadge = "spam" | "explicit" | "harassment";
+type ReportBadge = "spam" | "explicit" | "harassment" | "other";
 type UserRole = "superuser" | "mod" | "member";
 
 interface Report {
@@ -36,11 +36,21 @@ interface Report {
   reporter_id: string;
   reason: ReportBadge;
   description: string | null;
+  status: string;
   created_at: string;
   reporter?: {
     username: string;
     display_name: string;
     avatar_initials: string;
+  };
+  post?: {
+    id: string;
+    content: string;
+    author_id: string;
+    author?: {
+      username: string;
+      display_name: string;
+    };
   };
 }
 
@@ -122,6 +132,7 @@ const BADGE_LABELS: Record<ReportBadge, string> = {
   spam: "Spam",
   explicit: "Explicit",
   harassment: "Assedio",
+  other: "Outro",
 };
 const ROLE_LABELS: Record<UserRole, string> = {
   superuser: "Super User",
@@ -476,6 +487,58 @@ export default function AdminPage() {
 
   const removeReport = (id: string) =>
     setReports((r) => r.filter((x) => x.id !== id));
+
+  const handleDismissReport = async (reportId: string) => {
+    setLoadingModal({ show: true, message: 'A ignorar denúncia...' });
+    try {
+      const res = await fetch('/api/admin/reports', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ report_id: reportId, action: 'dismiss' }),
+      });
+      setLoadingModal({ show: false, message: '' });
+      if (res.ok) {
+        setReports(prev => prev.filter(r => r.id !== reportId));
+        setSuccessModal({ show: true, message: 'Denúncia ignorada com sucesso' });
+      } else {
+        const data = await res.json();
+        setErrorModal({ show: true, message: data.error || 'Erro ao ignorar denúncia' });
+      }
+    } catch {
+      setLoadingModal({ show: false, message: '' });
+      setErrorModal({ show: true, message: 'Erro ao comunicar com o servidor' });
+    }
+  };
+
+  const handleDeleteReportedPost = async (reportId: string, postId: string) => {
+    setConfirmModal({
+      show: true,
+      title: 'Eliminar Publicação',
+      message: 'Tens a certeza que queres eliminar esta publicação? Esta ação é irreversível.',
+      onConfirm: async () => {
+        setConfirmModal({ show: false, title: '', message: '', onConfirm: () => {} });
+        setLoadingModal({ show: true, message: 'A eliminar publicação...' });
+        try {
+          const res = await fetch('/api/admin/reports', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ report_id: reportId, action: 'delete_post' }),
+          });
+          setLoadingModal({ show: false, message: '' });
+          if (res.ok) {
+            setReports(prev => prev.filter(r => r.id !== reportId));
+            setSuccessModal({ show: true, message: 'Publicação eliminada com sucesso' });
+          } else {
+            const data = await res.json();
+            setErrorModal({ show: true, message: data.error || 'Erro ao eliminar publicação' });
+          }
+        } catch {
+          setLoadingModal({ show: false, message: '' });
+          setErrorModal({ show: true, message: 'Erro ao comunicar com o servidor' });
+        }
+      },
+    });
+  };
 
   const handleBanUser = async (userId: string, userName: string) => {
     setConfirmModal({
@@ -851,7 +914,19 @@ export default function AdminPage() {
                       {BADGE_LABELS[r.reason]}
                     </span>
                   </div>
-                  <div className={styles.reportText}>{r.description || `Denúncia de post ${r.post_id.slice(0, 8)}`}</div>
+                  {r.reporter && (
+                    <div className={styles.reportMeta}>
+                      Denunciado por <strong>@{r.reporter.username}</strong>
+                    </div>
+                  )}
+                  {r.post?.content && (
+                    <div className={styles.reportPostContent}>
+                      "{r.post.content.length > 120 ? r.post.content.slice(0, 120) + '...' : r.post.content}"
+                    </div>
+                  )}
+                  {r.description && (
+                    <div className={styles.reportText}>{r.description}</div>
+                  )}
                   <div className={styles.reportMeta}>
                     {formatRelativeTime(r.created_at)}
                   </div>
@@ -859,15 +934,15 @@ export default function AdminPage() {
                 <div className={styles.reportActions}>
                   <button
                     className={styles.btnDelete}
-                    onClick={() => removeReport(r.id)}
+                    onClick={() => handleDeleteReportedPost(r.id, r.post_id)}
                   >
-                    <Trash2 size={13} /> Apagar
+                    <Trash2 size={13} /> Apagar post
                   </button>
-                  <button className={styles.btnWarn}>
-                    <AlertCircle size={13} /> Ver
-                  </button>
-                  <button className={styles.btnKeep}>
-                    <CheckCircle size={13} />
+                  <button
+                    className={styles.btnWarn}
+                    onClick={() => handleDismissReport(r.id)}
+                  >
+                    <AlertCircle size={13} /> Ignorar
                   </button>
                 </div>
               </div>

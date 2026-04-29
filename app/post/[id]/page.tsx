@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { Loader2 } from 'lucide-react'
 import Topbar from '@/components/layout/Topbar'
 import PostCard from '@/components/posts/PostCard'
@@ -10,6 +11,8 @@ import type { Post } from '@/types'
 
 export default function PostPage() {
   const params = useParams<{ id: string }>()
+  const { data: session } = useSession()
+  const router = useRouter()
   const [post, setPost] = useState<Post | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -48,7 +51,11 @@ export default function PostPage() {
 
   const handleDelete = async (id: string) => {
     await deletePost(id)
+    router.push('/feed')
   }
+
+  const sessionRole = (session?.user as { role?: string } | undefined)?.role
+  const canDelete = session?.user?.id === post?.author_id || sessionRole === 'mod' || sessionRole === 'superuser'
 
   return (
     <div className="feed-page">
@@ -61,7 +68,11 @@ export default function PostPage() {
             <p className="feed-empty-state">Publicação não encontrada.</p>
           ) : (
             <div className="feed-posts">
-              <PostCard post={post} onLike={handleLike} onDelete={handleDelete} />
+              <PostCard
+                post={post}
+                onLike={handleLike}
+                onDelete={canDelete ? handleDelete : undefined}
+              />
             </div>
           )}
         </div>
