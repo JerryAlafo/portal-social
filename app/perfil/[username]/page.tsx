@@ -124,6 +124,18 @@ function UserListModal({ type, users, loading, onClose }: UserListModalProps) {
   )
 }
 
+function AvatarModal({ avatarUrl, displayName, onClose }: { avatarUrl: string | null, displayName: string, onClose: () => void }) {
+  if (!avatarUrl) return null
+  return (
+    <div className="avatar-modal-overlay" onClick={onClose}>
+      <div className="avatar-modal-content" onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}><X size={20} /></button>
+        <img src={avatarUrl} alt={displayName} className="avatar-modal-img" />
+      </div>
+    </div>
+  )
+}
+
 function fmt(n: number) {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n)
 }
@@ -160,6 +172,7 @@ export default function UserProfilePage() {
   const [following, setFollowing] = useState(false)
   const [showFollowersModal, setShowFollowersModal] = useState(false)
   const [showFollowingModal, setShowFollowingModal] = useState(false)
+  const [showAvatarModal, setShowAvatarModal] = useState(false)
   const [followersList, setFollowersList] = useState<SimpleUser[]>([])
   const [followingList, setFollowingList] = useState<SimpleUser[]>([])
   const [loadingFollowers, setLoadingFollowers] = useState(false)
@@ -408,7 +421,7 @@ export default function UserProfilePage() {
           <div className="perfil-info-area">
             <div className="perfil-avatar-row">
               <div className="perfil-avatar-wrap">
-                <div className="perfil-avatar">
+                <div className="perfil-avatar perfil-avatar-clickable" onClick={() => profile.avatar_url && setShowAvatarModal(true)}>
                   {profile.avatar_url
                     ? <img src={profile.avatar_url} alt={profile.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
                     : initials}
@@ -650,6 +663,14 @@ export default function UserProfilePage() {
           users={followingList}
           loading={loadingFollowing}
           onClose={() => setShowFollowingModal(false)}
+        />
+      )}
+
+      {showAvatarModal && (
+        <AvatarModal
+          avatarUrl={profile?.avatar_url}
+          displayName={profile?.display_name || ''}
+          onClose={() => setShowAvatarModal(false)}
         />
       )}
     </div>

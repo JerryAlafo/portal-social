@@ -1072,6 +1072,43 @@ button {
   background: var(--bg4);
   color: var(--text);
 }
+.perfil-avatar-clickable {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.perfil-avatar-clickable:hover {
+  opacity: 0.9;
+}
+.avatar-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.avatar-modal-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+.avatar-modal-content .modal-close {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 8px;
+}
+.avatar-modal-img {
+  max-width: 100%;
+  max-height: 80vh;
+  border-radius: var(--radius);
+  object-fit: contain;
+}
 .perfil-icon-btn {
   width: 36px;
   height: 36px;
