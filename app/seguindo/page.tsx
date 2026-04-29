@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { Loader2 } from 'lucide-react'
 import Topbar from '@/components/layout/Topbar'
-import { getFollowing, unfollowUser } from '@/services/following'
+import { getFollowing, toggleFollow } from '@/services/following'
 import { getFeed } from '@/services/posts'
 import type { Profile, Post } from '@/types'
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll'
@@ -62,8 +62,10 @@ export default function SeguindoPage() {
 
   const handleUnfollow = async (userId: string) => {
     try {
-      await unfollowUser(userId)
-      setFollowing(prev => prev.filter(f => f.id !== userId))
+      const { data } = await toggleFollow(userId)
+      if (data?.following === false) {
+        setFollowing(prev => prev.filter(f => f.id !== userId))
+      }
     } catch { /* ignore */ }
   }
 

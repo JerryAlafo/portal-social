@@ -7,7 +7,7 @@ import Topbar from '@/components/layout/Topbar'
 import { getFeed } from '@/services/posts'
 import { getSuggestions } from '@/services/suggestions'
 import { getEvents } from '@/services/events'
-import { followUser } from '@/services/following'
+import { toggleFollow } from '@/services/following'
 import type { Post, Profile, Event } from '@/types'
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll'
 
@@ -95,7 +95,7 @@ export default function ExplorarPage() {
       }
       return next
     })
-    try { await followUser(userId) } catch { /* ignore */ }
+    try { await toggleFollow(userId) } catch { /* ignore */ }
   }
 
   return (

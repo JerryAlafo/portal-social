@@ -6,12 +6,7 @@ export async function getFollowing(): Promise<ApiResponse<Profile[]>> {
   return data
 }
 
-export async function followUser(user_id: string): Promise<ApiResponse<{ following: boolean }>> {
+export async function toggleFollow(user_id: string): Promise<ApiResponse<{ following: boolean }>> {
   const { data } = await api.post('/following', { user_id })
-  return data
-}
-
-export async function unfollowUser(user_id: string): Promise<ApiResponse<{ following: boolean }>> {
-  const { data } = await api.delete('/following', { data: { user_id } })
   return data
 }

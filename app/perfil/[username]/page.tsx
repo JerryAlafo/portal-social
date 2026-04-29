@@ -171,17 +171,29 @@ export default function UserProfilePage() {
 
   const isOwnProfile = session?.user?.username === username
 
+  // Load profile + verify following status (like likes pattern)
   useEffect(() => {
+    if (!username || !session?.user?.id) return
+
     async function loadProfile() {
-      if (!username) return
       setLoading(true)
       try {
         const res = await fetch(`/api/users/username/${username}/profile`)
         const json = await res.json()
         if (json.profile) {
           setProfile(json.profile)
-          setFollowing(json.profile.is_following || false)
           setPosts(json.data || [])
+
+          // Immediately verify following status via API (like likes)
+          if (!isOwnProfile) {
+            try {
+              const checkRes = await fetch(`/api/following?check=${json.profile.id}`)
+              const checkJson = await checkRes.json()
+              setFollowing(checkJson.data?.following ?? false)
+            } catch {
+              setFollowing(json.profile.is_following || false)
+            }
+          }
         }
       } catch (e) {
         console.error(e)
@@ -190,7 +202,7 @@ export default function UserProfilePage() {
       }
     }
     loadProfile()
-  }, [username])
+  }, [username, session?.user?.id])
 
   const loadTabData = useCallback(async (page: number, append: boolean) => {
     if (!profile?.id || !username) return
@@ -256,18 +268,47 @@ export default function UserProfilePage() {
 
   const handleFollow = async () => {
     if (!profile) return
+
+    const wasFollowing = following
+
+    // Optimistic update
+    setFollowing(!wasFollowing)
+    setProfile(prev => prev ? {
+      ...prev,
+      followers_count: wasFollowing
+        ? prev.followers_count - 1
+        : prev.followers_count + 1
+    } : null)
+
     try {
-      await fetch('/api/following', {
-        method: following ? 'DELETE' : 'POST',
+      const res = await fetch('/api/following', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: profile.id })
       })
-      setFollowing(!following)
+      const json = await res.json()
+
+      if (json.data?.following !== undefined) {
+        setFollowing(json.data.following)
+        // Adjust followers count if API returns different state
+        if (json.data.following !== !wasFollowing) {
+          setProfile(prev => prev ? {
+            ...prev,
+            followers_count: json.data.following
+              ? prev.followers_count + 1
+              : prev.followers_count - 1
+          } : null)
+        }
+      }
+    } catch (e) {
+      // Revert on error
+      setFollowing(wasFollowing)
       setProfile(prev => prev ? {
         ...prev,
-        followers_count: prev.followers_count + (following ? -1 : 1)
+        followers_count: wasFollowing
+          ? prev.followers_count + 1
+          : prev.followers_count - 1
       } : null)
-    } catch (e) {
       console.error(e)
     }
   }

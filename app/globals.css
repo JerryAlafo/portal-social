@@ -1046,6 +1046,32 @@ button {
   font-weight: 500;
   cursor: pointer;
 }
+.perfil-follow-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.perfil-follow-btn:hover {
+  opacity: 0.9;
+}
+.perfil-following {
+  background: var(--bg3);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.perfil-following:hover {
+  background: var(--bg4);
+  color: var(--text);
+}
 .perfil-icon-btn {
   width: 36px;
   height: 36px;

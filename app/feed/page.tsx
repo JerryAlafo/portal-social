@@ -9,7 +9,7 @@ import { getFeed, createPost, deletePost, toggleLike } from '@/services/posts'
 import { getTrending } from '@/services/trending'
 import { getSuggestions } from '@/services/suggestions'
 import { getEvents } from '@/services/events'
-import { followUser } from '@/services/following'
+import { toggleFollow } from '@/services/following'
 import { uploadImage } from '@/services/upload'
 import FeatureUnavailableModal from '@/components/ui/FeatureUnavailableModal'
 import type { Post, TrendingTag, Profile, Event } from '@/types'
@@ -191,7 +191,27 @@ export default function FeedPage() {
       }
       return next
     })
-    try { await followUser(userId) } catch { /* ignore */ }
+    try {
+      const { data } = await toggleFollow(userId)
+      if (data?.following === false) {
+        setFollowed(prev => {
+          const next = new Set(prev)
+          next.delete(username)
+          return next
+        })
+      }
+    } catch {
+      // Revert on error
+      setFollowed(prev => {
+        const next = new Set(prev)
+        if (next.has(username)) {
+          next.delete(username)
+        } else {
+          next.add(username)
+        }
+        return next
+      })
+    }
   }
 
   const sessionRole = (session?.user as { role?: string } | undefined)?.role

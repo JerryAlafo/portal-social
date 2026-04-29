@@ -7,7 +7,7 @@ import Link from 'next/link'
 import Topbar from '@/components/layout/Topbar'
 import { search } from '@/services/search'
 import { getTrending } from '@/services/trending'
-import { followUser } from '@/services/following'
+import { toggleFollow } from '@/services/following'
 import type { Profile, Post, TrendingTag } from '@/types'
 
 const TABS = ['Tudo', 'Publicacoes', 'Membros', 'Tags', 'Fanfics']
@@ -53,7 +53,7 @@ function PesquisarContent() {
     const next = new Set(followed)
     next.has(username) ? next.delete(username) : next.add(username)
     setFollowed(next)
-    try { await followUser(userId) } catch (e) { /* revert on failure */ }
+    try { await toggleFollow(userId) } catch (e) { /* revert on failure */ }
   }
 
   return (
