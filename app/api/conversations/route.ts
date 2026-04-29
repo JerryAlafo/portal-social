@@ -52,21 +52,22 @@ export async function GET() {
 
         return {
           id: conv_id,
-          other_user: otherUser,
+          other_user: otherUser ?? null,
           last_message: lastMsgArr?.[0] ?? null,
           unread_count: unread ?? 0,
         }
       })
     )
 
-    // Sort by last message date
-    conversations.sort((a, b) => {
+    // Sort by last message date and filter out null other_user
+    const validConversations = conversations.filter(c => c.other_user !== null)
+    validConversations.sort((a, b) => {
       const aTime = a.last_message?.created_at ?? ''
       const bTime = b.last_message?.created_at ?? ''
       return bTime.localeCompare(aTime)
     })
 
-    return NextResponse.json({ data: conversations, error: null })
+    return NextResponse.json({ data: validConversations, error: null })
   } catch {
     return NextResponse.json({ error: 'Erro ao carregar conversas.' }, { status: 500 })
   }

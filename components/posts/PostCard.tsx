@@ -60,6 +60,8 @@ function CommentItem({ comment, myId, myRole, onDelete, onEdit, onLike, onReply,
     Boolean(comment.updated_at) &&
     new Date(comment.updated_at as string).getTime() - new Date(comment.created_at).getTime() > 1000
 
+  if (!comment.author) return null
+
   return (
     <div className={styles.commentItem} style={{ marginLeft: depth > 0 ? 24 : 0 }}>
       <Link href={`/perfil/${comment.author.username}`} className={styles.commentAvatar} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', flexShrink: 0 }}>
@@ -254,7 +256,7 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
   const handleReply = (parentId: string) => {
     setReplyingTo(parentId)
     const parentComment = comments.find(c => c.id === parentId)
-    if (parentComment) {
+    if (parentComment && parentComment.author) {
       setCommentText(`@${parentComment.author.username} `)
     }
   }
@@ -266,7 +268,7 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Post de ${post.author.display_name} no PORTAL`,
+          title: `Post de ${post.author!.display_name} no PORTAL`,
           text: post.content.slice(0, 100),
           url,
         })
@@ -285,6 +287,8 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
   const replyingToComment = replyingTo ? comments.find(c => c.id === replyingTo) : null
 
   const { author } = post
+
+  if (!author) return null
 
   return (
     <article className={styles.card}>
@@ -432,7 +436,7 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
               {myInitials}
             </div>
             <div className={styles.commentInputWrap}>
-              {replyingToComment && (
+              {replyingToComment && replyingToComment.author && (
                 <div className={styles.replyingToBar}>
                   <span>A responder a @{replyingToComment.author.username}</span>
                   <button onClick={() => { setReplyingTo(null); setCommentText('') }}><X size={12} /></button>
@@ -440,7 +444,7 @@ export default function PostCard({ post, onDelete, onLike }: PostCardProps) {
               )}
               <input
                 className={styles.commentField}
-                placeholder={replyingTo ? `Responder a ${replyingToComment?.author.username}...` : 'Adicionar um comentário...'}
+                placeholder={replyingTo && replyingToComment?.author ? `Responder a ${replyingToComment.author.username}...` : 'Adicionar um comentário...'}
                 value={commentText}
                 onChange={e => setCommentText(e.target.value)}
                 onKeyDown={e => {

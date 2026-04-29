@@ -30,7 +30,7 @@ export interface Post {
   shares_count: number
   created_at: string
   updated_at: string
-  author: Pick<Profile, 'id' | 'username' | 'display_name' | 'avatar_initials' | 'avatar_url' | 'role'>
+  author: Pick<Profile, 'id' | 'username' | 'display_name' | 'avatar_initials' | 'avatar_url' | 'role'> | null
   liked_by_me?: boolean
 }
 
@@ -44,7 +44,7 @@ export interface Comment {
   liked_by_me?: boolean
   created_at: string
   updated_at?: string
-  author: Pick<Profile, 'id' | 'username' | 'display_name' | 'avatar_initials' | 'avatar_url'>
+  author: Pick<Profile, 'id' | 'username' | 'display_name' | 'avatar_initials' | 'avatar_url'> | null
 }
 
 export interface Message {
@@ -59,7 +59,7 @@ export interface Message {
 export interface Conversation {
   id: string
   created_at: string
-  other_user: Pick<Profile, 'id' | 'username' | 'display_name' | 'avatar_initials' | 'avatar_url' | 'is_online'>
+  other_user: Pick<Profile, 'id' | 'username' | 'display_name' | 'avatar_initials' | 'avatar_url' | 'is_online'> | null
   last_message: Pick<Message, 'content' | 'created_at' | 'sender_id'> | null
   unread_count: number
 }
@@ -72,7 +72,7 @@ export interface Notification {
   post_id: string | null
   is_read: boolean
   created_at: string
-  actor: Pick<Profile, 'id' | 'username' | 'display_name' | 'avatar_initials' | 'avatar_url'>
+  actor: Pick<Profile, 'id' | 'username' | 'display_name' | 'avatar_initials' | 'avatar_url'> | null
 }
 
 export interface Event {

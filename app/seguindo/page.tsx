@@ -102,26 +102,26 @@ export default function SeguindoPage() {
 
               <p className="seguindo-feed-label">Publicacoes recentes de quem segues</p>
 
-              <div className="seguindo-posts">
+                <div className="seguindo-posts">
                 {posts.length === 0 ? (
                   <p style={{ color: 'var(--text3)', fontSize: 14 }}>Ainda nao ha publicacoes de quem segues.</p>
-                ) : posts.map((p, i) => (
+                ) : posts.filter(p => p.author !== null).map((p, i) => (
                   <div key={p.id} className={`animate-fade-in-up animate-delay-${Math.min(i + 1, 4)}`}>
                     <div className="post-card">
                       <div className="post-header">
-                        <Link href={`/perfil/${p.author.username}`} className="post-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
-                          {p.author.avatar_url
-                            ? <img src={p.author.avatar_url} alt={p.author.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-                            : p.author.avatar_initials}
+                        <Link href={`/perfil/${p.author!.username}`} className="post-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
+                          {p.author!.avatar_url
+                            ? <img src={p.author!.avatar_url} alt={p.author!.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                            : p.author!.avatar_initials}
                         </Link>
                         <div className="post-author-info">
-                          <Link href={`/perfil/${p.author.username}`} className="post-author-name" style={{ textDecoration: 'none', color: 'inherit' }}>
-                            {p.author.display_name}
-                            {p.author.role === 'superuser' && <span className="post-badge-su">Super User</span>}
-                            {p.author.role === 'mod' && <span className="post-badge-mod">Moderador</span>}
+                          <Link href={`/perfil/${p.author!.username}`} className="post-author-name" style={{ textDecoration: 'none', color: 'inherit' }}>
+                            {p.author!.display_name}
+                            {p.author!.role === 'superuser' && <span className="post-badge-su">Super User</span>}
+                            {p.author!.role === 'mod' && <span className="post-badge-mod">Moderador</span>}
                           </Link>
                           <div className="post-meta">
-                            <Link href={`/perfil/${p.author.username}`} style={{ textDecoration: 'none', color: 'inherit' }}>@{p.author.username}</Link>
+                            <Link href={`/perfil/${p.author!.username}`} style={{ textDecoration: 'none', color: 'inherit' }}>@{p.author!.username}</Link>
                             {p.category && <span>{p.category}</span>}
                           </div>
                         </div>

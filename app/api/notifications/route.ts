@@ -18,7 +18,8 @@ export async function GET() {
 
     if (error) throw error
 
-    return NextResponse.json({ data: data ?? [], error: null })
+    const filtered = (data ?? []).filter(n => n.actor !== null)
+    return NextResponse.json({ data: filtered, error: null })
   } catch {
     return NextResponse.json({ error: 'Erro ao carregar notificações.' }, { status: 500 })
   }

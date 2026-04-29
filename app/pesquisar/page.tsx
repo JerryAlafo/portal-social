@@ -53,7 +53,7 @@ function PesquisarContent() {
     const next = new Set(followed)
     next.has(username) ? next.delete(username) : next.add(username)
     setFollowed(next)
-    try { await followUser(userId) } catch { /* revert on failure */ }
+    try { await followUser(userId) } catch (e) { /* revert on failure */ }
   }
 
   return (
@@ -176,22 +176,22 @@ function PesquisarContent() {
                 ? <p className="pesquisar-empty">Nenhuma publicacao encontrada para &quot;{query}&quot;</p>
                 : (
                   <div className="pesquisar-posts-list">
-                    {results.posts.map(p => (
+                    {results.posts.filter(p => p.author !== null).map(p => (
                       <div key={p.id} className="post-card">
                         <div className="post-header">
-                          <Link href={`/perfil/${p.author.username}`} className="post-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
-                            {p.author.avatar_url
-                              ? <img src={p.author.avatar_url} alt={p.author.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-                              : p.author.avatar_initials}
+                          <Link href={`/perfil/${p.author!.username}`} className="post-avatar" style={{ background: 'var(--bg4)', color: 'var(--accent2)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
+                            {p.author!.avatar_url
+                              ? <img src={p.author!.avatar_url} alt={p.author!.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                              : p.author!.avatar_initials}
                           </Link>
                           <div className="post-author-info">
-                            <Link href={`/perfil/${p.author.username}`} className="post-author-name" style={{ textDecoration: 'none', color: 'inherit' }}>
-                              {p.author.display_name}
-                              {p.author.role === 'superuser' && <span className="post-badge-su">Super User</span>}
-                              {p.author.role === 'mod' && <span className="post-badge-mod">Moderador</span>}
+                            <Link href={`/perfil/${p.author!.username}`} className="post-author-name" style={{ textDecoration: 'none', color: 'inherit' }}>
+                              {p.author!.display_name}
+                              {p.author!.role === 'superuser' && <span className="post-badge-su">Super User</span>}
+                              {p.author!.role === 'mod' && <span className="post-badge-mod">Moderador</span>}
                             </Link>
                             <div className="post-meta">
-                              <Link href={`/perfil/${p.author.username}`} style={{ textDecoration: 'none', color: 'inherit' }}>@{p.author.username}</Link>
+                              <Link href={`/perfil/${p.author!.username}`} style={{ textDecoration: 'none', color: 'inherit' }}>@{p.author!.username}</Link>
                               {p.category && <span>{p.category}</span>}
                             </div>
                           </div>
@@ -199,7 +199,7 @@ function PesquisarContent() {
                         <div className="post-body">
                           <p className="post-text">{p.content}</p>
                           {p.image_url && (
-                            <img src={p.image_url} alt="Imagem do post" style={{ maxWidth: '100%', borderRadius: 'var(--radius)', marginTop: 12, maxHeight: 300, objectFit: 'cover' }} />
+                            <img src={p.image_url} alt="Imagem do post" className="post-image" style={{ maxWidth: '100%', borderRadius: 'var(--radius)', marginTop: 12, maxHeight: 300, objectFit: 'cover' }} />
                           )}
                         </div>
                       </div>

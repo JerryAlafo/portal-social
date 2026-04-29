@@ -52,8 +52,10 @@ export async function GET(request: Request) {
 
     if (error) throw error
 
+    const validPosts = (posts ?? []).filter(p => p.author !== null)
+
     // Check which posts the current user has liked
-    const postIds = posts?.map(p => p.id) ?? []
+    const postIds = validPosts.map(p => p.id)
     const { data: likes } = await supabase
       .from('post_likes')
       .select('post_id')
@@ -61,7 +63,7 @@ export async function GET(request: Request) {
       .in('post_id', postIds)
 
     const likedSet = new Set(likes?.map(l => l.post_id))
-    const postsWithLikes = posts?.map(p => ({ ...p, liked_by_me: likedSet.has(p.id) })) ?? []
+    const postsWithLikes = validPosts.map(p => ({ ...p, liked_by_me: likedSet.has(p.id) }))
 
     return NextResponse.json({ data: postsWithLikes, page, limit, error: null })
   } catch {

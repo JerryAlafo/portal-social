@@ -69,7 +69,7 @@ export default function Topbar({ title }: TopbarProps) {
   }
 
   const notificationHref = (notification: Notification) => {
-    if (notification.type === 'follow') {
+    if (notification.type === 'follow' && notification.actor) {
       return `/perfil/${notification.actor.username}`
     }
     if (notification.post_id) {
@@ -147,18 +147,18 @@ export default function Topbar({ title }: TopbarProps) {
           {notifications.map(n => (
             <div key={n.id} className={`${styles.notifItem} ${!n.is_read ? styles.unread : ''}`}>
               <Link
-                href={notificationHref(n)}
-                className={styles.notifAvatar}
-                style={{ background: 'var(--bg4)', color: 'var(--accent2)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
-              >
-                {n.actor.avatar_initials}
-              </Link>
+                 href={notificationHref(n)}
+                 className={styles.notifAvatar}
+                 style={{ background: 'var(--bg4)', color: 'var(--accent2)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+               >
+                 {n.actor?.avatar_initials || '??'}
+               </Link>
               <div className={styles.notifContent}>
-                <p className={styles.notifText}>
-                  <Link href={notificationHref(n)} style={{ textDecoration: 'none', color: 'inherit', fontWeight: n.is_read ? 400 : 600 }}>
-                    {typeLabel(n.type, n.actor.display_name)}
-                  </Link>
-                </p>
+                  <p className={styles.notifText}>
+                   <Link href={notificationHref(n)} style={{ textDecoration: 'none', color: 'inherit', fontWeight: n.is_read ? 400 : 600 }}>
+                     {typeLabel(n.type, n.actor?.display_name ?? 'Utilizador')}
+                   </Link>
+                 </p>
                 <span className={styles.notifTime}>{timeAgo(n.created_at)}</span>
               </div>
             </div>

@@ -24,7 +24,8 @@ export async function GET(_req: Request, props: { params: Promise<{ postId: stri
     const { data, error } = await query
 
     if (error) throw error
-    return NextResponse.json({ data: data ?? [], error: null })
+    const filtered = (data ?? []).filter(c => c.author !== null)
+    return NextResponse.json({ data: filtered, error: null })
   } catch (err) {
     console.error('GET comments error:', err)
     return NextResponse.json({ error: 'Erro ao carregar comentários.' }, { status: 500 })

@@ -91,6 +91,10 @@ export async function GET(request: Request) {
       .limit(1)
       .single()
 
+    if (!otherUser) {
+      return NextResponse.json({ error: 'Utilizador não encontrado.' }, { status: 404 })
+    }
+
     return NextResponse.json({
       data: {
         id: conversationId,

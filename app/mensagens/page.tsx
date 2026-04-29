@@ -200,8 +200,9 @@ function MensagensContent() {
   }
 
   const filtered = conversations.filter(c =>
-    c.other_user.display_name.toLowerCase().includes(search.toLowerCase()) ||
-    c.other_user.username.toLowerCase().includes(search.toLowerCase())
+    c.other_user &&
+    (c.other_user.display_name.toLowerCase().includes(search.toLowerCase()) ||
+    c.other_user.username.toLowerCase().includes(search.toLowerCase()))
   )
 
   const totalUnread = conversations.reduce((sum, c) => sum + c.unread_count, 0)
@@ -244,15 +245,15 @@ function MensagensContent() {
               >
                 <div className={styles.convAvatarWrap}>
                   <div className={styles.convAvatar} style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
-                    {c.other_user.avatar_url
+                    {c.other_user?.avatar_url
                       ? <img src={c.other_user.avatar_url} alt={c.other_user.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-                      : c.other_user.avatar_initials}
+                      : c.other_user?.avatar_initials}
                   </div>
-                  {c.other_user.is_online && <span className={styles.onlineDot} />}
+                  {c.other_user?.is_online && <span className={styles.onlineDot} />}
                 </div>
                 <div className={styles.convInfo}>
                   <div className={styles.convTop}>
-                    <span className={styles.convName}>{c.other_user.display_name}</span>
+                    <span className={styles.convName}>{c.other_user?.display_name}</span>
                     <span className={styles.convTime}>{formatConvTime(c.last_message?.created_at)}</span>
                   </div>
                   <div className={styles.convBottom}>
@@ -285,15 +286,15 @@ function MensagensContent() {
                 </button>
                 <div className={styles.chatAvatarWrap}>
                   <div className={styles.chatAvatar} style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
-                    {activeConv.other_user.avatar_url
+                    {activeConv.other_user?.avatar_url
                       ? <img src={activeConv.other_user.avatar_url} alt={activeConv.other_user.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-                      : activeConv.other_user.avatar_initials}
+                      : activeConv.other_user?.avatar_initials}
                   </div>
-                  {activeConv.other_user.is_online && <span className={styles.onlineDot} />}
+                  {activeConv.other_user?.is_online && <span className={styles.onlineDot} />}
                 </div>
                 <div className={styles.chatHeaderInfo}>
-                  <span className={styles.chatName}>{activeConv.other_user.display_name}</span>
-                  <span className={styles.chatStatus}>{activeConv.other_user.is_online ? 'Online agora' : 'Offline'}</span>
+                  <span className={styles.chatName}>{activeConv.other_user?.display_name}</span>
+                  <span className={styles.chatStatus}>{activeConv.other_user?.is_online ? 'Online agora' : 'Offline'}</span>
                 </div>
                 <div className={styles.chatHeaderActions}>
                   <button className={styles.headerBtn} onClick={() => setShowNotAvailable(true)}><Phone size={16} /></button>
@@ -315,9 +316,9 @@ function MensagensContent() {
                         <div key={msg.id} className={`${styles.msgRow} ${isMine ? styles.msgMine : ''}`}>
                           {!isMine && (
                           <div className={styles.msgAvatar} style={{ background: 'var(--bg4)', color: 'var(--accent2)' }}>
-                            {activeConv.other_user.avatar_url
+                            {activeConv.other_user?.avatar_url
                               ? <img src={activeConv.other_user.avatar_url} alt={activeConv.other_user.display_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-                              : activeConv.other_user.avatar_initials}
+                              : activeConv.other_user?.avatar_initials}
                           </div>
                           )}
                           <div className={styles.msgBubble}>
@@ -354,7 +355,7 @@ function MensagensContent() {
                   ref={msgInputRef}
                   className={styles.msgInput}
                   type="text"
-                  placeholder={`Mensagem para ${activeConv.other_user.display_name}...`}
+                  placeholder={`Mensagem para ${activeConv.other_user?.display_name ?? 'utilizador'}...`}
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSend()}
