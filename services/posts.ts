@@ -18,6 +18,7 @@ export async function createPost(payload: {
   category?: string
   image_url?: string
   is_spoiler?: boolean
+  is_sensitive?: boolean
 }): Promise<ApiResponse<Post>> {
   try {
     const { data } = await api.post('/feed', payload)

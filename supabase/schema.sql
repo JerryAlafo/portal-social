@@ -48,6 +48,8 @@ create table if not exists posts (
   content        text        not null,
   category       text,
   image_url      text,
+  is_spoiler     boolean     not null default false,
+  is_sensitive   boolean     not null default false,
   likes_count    int         not null default 0,
   comments_count int         not null default 0,
   shares_count   int         not null default 0,

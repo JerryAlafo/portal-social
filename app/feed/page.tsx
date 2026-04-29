@@ -40,7 +40,8 @@ export default function FeedPage() {
   const [imagePreview,   setImagePreview]   = useState<string | null>(null)
   const [uploadingImg, setUploadingImg]  = useState(false)
   const [composeCategory, setComposeCategory] = useState<string>('Outro')
-  const [composeSpoiler, setComposeSpoiler] = useState(false)
+   const [composeSpoiler, setComposeSpoiler] = useState(false)
+   const [composeSensitive, setComposeSensitive] = useState(false)
   const [showFeatureModal, setShowFeatureModal] = useState(false)
   const [followed,       setFollowed]       = useState<Set<string>>(new Set())
 
@@ -144,6 +145,7 @@ export default function FeedPage() {
         category: normalizedCategory && normalizedCategory !== 'Tudo' ? normalizedCategory : undefined,
         image_url: imageUrl ?? undefined,
         is_spoiler: composeSpoiler,
+        is_sensitive: composeSensitive,
       })
       if (res.error) {
         setPublishError(res.error)
@@ -160,6 +162,7 @@ export default function FeedPage() {
         setImagePreview(null)
         setComposeCategory('Outro')
         setComposeSpoiler(false)
+        setComposeSensitive(false)
       }
     } catch { /* ignore */ }
     finally { setPublishing(false) }
@@ -277,6 +280,14 @@ export default function FeedPage() {
                 title="Marcar como spoiler"
               >
                 <AlertTriangle size={15} /> Spoiler
+              </button>
+              <button
+                type="button"
+                className={`feed-compose-btn ${composeSensitive ? 'feed-compose-btn-sensitive' : ''}`}
+                onClick={() => setComposeSensitive(v => !v)}
+                title="Marcar como conteúdo sensível"
+              >
+                <AlertTriangle size={15} /> Sensível
               </button>
               <button className="feed-submit-btn" onClick={handlePublish} disabled={publishing || !composeText.trim() || uploadingImg}>
                 {publishing ? <Loader size={14} className="spin" /> : <Send size={14} />}

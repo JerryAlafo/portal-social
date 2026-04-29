@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     const session = await auth()
     if (!session) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
 
-    const { content, category, image_url, is_spoiler } = await request.json()
+    const { content, category, image_url, is_spoiler, is_sensitive } = await request.json()
 
     if (!content?.trim()) {
       return NextResponse.json({ error: 'O conteúdo não pode estar vazio.' }, { status: 400 })
@@ -107,12 +107,18 @@ export async function POST(request: Request) {
         .single()
     }
 
-    let insertRes = await tryInsert({ ...baseInsert, is_spoiler: Boolean(is_spoiler) })
+    let insertRes = await tryInsert({ ...baseInsert, is_spoiler: Boolean(is_spoiler), is_sensitive: Boolean(is_sensitive) })
     if (insertRes.error) {
       const msg = String(insertRes.error.message || '')
-      // Backwards-compatible: if DB doesn't have is_spoiler yet, retry without it.
+      // Backwards-compatible: if DB doesn't have is_spoiler/is_sensitive yet, retry without them.
       if (msg.toLowerCase().includes('is_spoiler') && msg.toLowerCase().includes('does not exist')) {
-        insertRes = await tryInsert(baseInsert)
+        insertRes = await tryInsert({ ...baseInsert, is_sensitive: Boolean(is_sensitive) })
+      }
+      if (insertRes.error) {
+        const msg2 = String(insertRes.error.message || '')
+        if (msg2.toLowerCase().includes('is_sensitive') && msg2.toLowerCase().includes('does not exist')) {
+          insertRes = await tryInsert(baseInsert)
+        }
       }
     }
 

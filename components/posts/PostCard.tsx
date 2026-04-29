@@ -143,7 +143,8 @@ export default function PostCard({ post, onDelete, onLike, onReport }: PostCardP
 
   const [menuOpen, setMenuOpen] = useState(false)
   const [commentsOpen, setCommentsOpen] = useState(false)
-  const [spoilerRevealed, setSpoilerRevealed] = useState(false)
+   const [spoilerRevealed, setSpoilerRevealed] = useState(false)
+   const [sensitiveRevealed, setSensitiveRevealed] = useState(false)
   const [comments, setComments] = useState<Comment[]>([])
   const [commentsLoaded, setCommentsLoaded] = useState(false)
   const [loadingComments, setLoadingComments] = useState(false)
@@ -175,8 +176,10 @@ export default function PostCard({ post, onDelete, onLike, onReport }: PostCardP
 
   const myId = session?.user?.id ?? ''
   const myRole = (session?.user as { role?: string })?.role ?? ''
-  const isSpoiler = Boolean((post as Post).is_spoiler)
-  const canReveal = !isSpoiler || spoilerRevealed
+   const isSpoiler = Boolean((post as Post).is_spoiler)
+   const isSensitive = Boolean((post as Post).is_sensitive)
+   const canReveal = !isSpoiler || spoilerRevealed
+   const canRevealSensitive = !isSensitive || sensitiveRevealed
 
   const openMenu = useCallback(() => {
     if (moreBtnRef.current) {
@@ -445,7 +448,7 @@ export default function PostCard({ post, onDelete, onLike, onReport }: PostCardP
         </div>
       </div>
 
-      <div className={styles.body}>
+       <div className={styles.body}>
         {isSpoiler && !spoilerRevealed && (
           <button
             type="button"
@@ -460,9 +463,25 @@ export default function PostCard({ post, onDelete, onLike, onReport }: PostCardP
 
         {canReveal && (
           <>
-            <p className={styles.text}>{post.content}</p>
-            {post.image_url && (
-              <img src={post.image_url} alt="Imagem do post" className={styles.postImage} />
+            {isSensitive && !sensitiveRevealed && (
+              <button
+                type="button"
+                className={styles.sensitive}
+                onClick={() => setSensitiveRevealed(true)}
+                title="Clique para revelar"
+              >
+                <AlertTriangle size={16} />
+                Este conteúdo é sensível. Clique para revelar.
+              </button>
+            )}
+
+            {canRevealSensitive && (
+              <>
+                <p className={styles.text}>{post.content}</p>
+                {post.image_url && (
+                  <img src={post.image_url} alt="Imagem do post" className={styles.postImage} />
+                )}
+              </>
             )}
           </>
         )}
