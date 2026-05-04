@@ -8,6 +8,7 @@ import { getFeed } from '@/services/posts'
 import { getSuggestions } from '@/services/suggestions'
 import { getEvents } from '@/services/events'
 import { toggleFollow } from '@/services/following'
+import { useGuestMode } from '@/components/layout/GuestModeProvider'
 import type { Post, Profile, Event } from '@/types'
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll'
 
@@ -36,6 +37,7 @@ export default function ExplorarPage() {
   const [hasMore, setHasMore] = useState(true)
   const [followed, setFollowed] = useState<Set<string>>(new Set())
   const [activeView, setActiveView] = useState<'posts' | 'suggestions'>('posts')
+  const { isGuest, requestLogin } = useGuestMode()
 
   const loadPostsPage = useCallback(async (targetPage: number, append: boolean) => {
     const postsRes = await getFeed(
@@ -86,6 +88,14 @@ export default function ExplorarPage() {
   })
 
   const handleFollow = async (userId: string, username: string) => {
+    if (isGuest) {
+      requestLogin({
+        title: 'Seguir requer login',
+        message: 'Entra na tua conta para seguir membros e montar o teu feed.',
+      })
+      return
+    }
+
     setFollowed(prev => {
       const next = new Set(prev)
       if (next.has(username)) {
@@ -274,7 +284,19 @@ export default function ExplorarPage() {
                       <span className="explorar-featured-user-name">{name}</span>
                       <span className="explorar-featured-user-meta">@{(name.charAt(0).toLowerCase() + name.slice(1))}</span>
                     </div>
-                    <button className="explorar-follow-btn">Seguir</button>
+                    <button
+                      className="explorar-follow-btn"
+                      onClick={() => {
+                        if (isGuest) {
+                          requestLogin({
+                            title: 'Seguir requer login',
+                            message: 'Entra na tua conta para seguir membros e montar o teu feed.',
+                          })
+                        }
+                      }}
+                    >
+                      Seguir
+                    </button>
                   </div>
                 ))}
               </>

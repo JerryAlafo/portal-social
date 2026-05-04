@@ -1,15 +1,11 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
 import { createServerClient } from '@/lib/supabase-server'
 
 export async function GET(request: Request) {
   try {
-    const session = await auth()
-    if (!session) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
-
     const { searchParams } = new URL(request.url)
     const q = searchParams.get('q')?.trim()
-    const type = searchParams.get('type') ?? 'all' // all | users | posts | tags
+    const type = searchParams.get('type') ?? 'all'
 
     if (!q) return NextResponse.json({ data: { users: [], posts: [], tags: [] }, error: null })
 

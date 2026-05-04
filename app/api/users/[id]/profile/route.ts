@@ -8,8 +8,6 @@ export async function GET(
 ) {
   try {
     const session = await auth()
-    if (!session) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
-
     const { id } = await params
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') ?? '1')
@@ -19,7 +17,6 @@ export async function GET(
 
     const supabase = createServerClient()
 
-    // Get profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
@@ -27,7 +24,7 @@ export async function GET(
       .single()
 
     if (profileError || !profile) {
-      return NextResponse.json({ error: 'Perfil não encontrado.' }, { status: 404 })
+      return NextResponse.json({ error: 'Perfil nao encontrado.' }, { status: 404 })
     }
 
     let data: unknown[] = []
@@ -48,19 +45,23 @@ export async function GET(
       hasMore = (posts?.length ?? 0) > limit
       data = posts?.slice(0, limit) ?? []
 
-      // Check likes
-      const postIds = data.map(p => (p as { id: string }).id)
-      if (postIds.length > 0) {
+      const postIds = data.map((p) => (p as { id: string }).id)
+      if (session?.user?.id && postIds.length > 0) {
         const { data: likes } = await supabase
           .from('post_likes')
           .select('post_id')
           .eq('user_id', session.user.id)
           .in('post_id', postIds)
 
-        const likedSet = new Set(likes?.map(l => l.post_id))
-        data = (data as Array<{ id: string }>).map(p => ({
+        const likedSet = new Set(likes?.map((l) => l.post_id))
+        data = (data as Array<{ id: string }>).map((p) => ({
           ...p,
           liked_by_me: likedSet.has(p.id),
+        }))
+      } else {
+        data = (data as Array<{ id: string }>).map((p) => ({
+          ...p,
+          liked_by_me: false,
         }))
       }
     } else if (tab === 'fanfics') {
@@ -96,9 +97,9 @@ export async function GET(
       if (error) throw error
       hasMore = (likedPosts?.length ?? 0) > limit
       const slicedLiked = likedPosts?.slice(0, limit) ?? []
-      
+
       if (slicedLiked.length > 0) {
-        const postIds = slicedLiked.map(l => l.post_id)
+        const postIds = slicedLiked.map((l) => l.post_id)
         const { data: posts, error: postsError } = await supabase
           .from('posts')
           .select(`
@@ -108,14 +109,22 @@ export async function GET(
           .in('id', postIds)
 
         if (postsError) throw postsError
-        
-        const postsWithLikedByMe = (posts ?? []).map(p => ({
+
+        const viewerLikedSet = new Set<string>()
+        if (session?.user?.id && posts?.length) {
+          const { data: viewerLikes } = await supabase
+            .from('post_likes')
+            .select('post_id')
+            .eq('user_id', session.user.id)
+            .in('post_id', posts.map((p) => p.id))
+
+          viewerLikes?.forEach((like) => viewerLikedSet.add(like.post_id))
+        }
+
+        data = (posts ?? []).map((p) => ({
           ...p,
-          liked_by_me: true,
+          liked_by_me: viewerLikedSet.has(p.id),
         }))
-        data = postsWithLikedByMe
-      } else {
-        data = []
       }
     }
 

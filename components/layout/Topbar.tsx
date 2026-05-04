@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Search, Bell, Sun, Moon, X, Menu } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 import { useTheme } from '@/lib/theme-context'
 import { useSidebar } from '@/lib/sidebar-context'
 import { getNotifications, markAllAsRead } from '@/services/notifications'
+import { useGuestMode } from './GuestModeProvider'
 import type { Notification } from '@/types'
 import styles from './Topbar.module.css'
 
@@ -18,6 +20,8 @@ export default function Topbar({ title }: TopbarProps) {
   const router = useRouter()
   const { theme, toggleTheme } = useTheme()
   const { toggle: toggleSidebar } = useSidebar()
+  const { data: session } = useSession()
+  const { isGuest, requestLogin } = useGuestMode()
   const [notifOpen, setNotifOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -37,6 +41,8 @@ export default function Topbar({ title }: TopbarProps) {
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 60_000)
 
+    if (!session?.user || isGuest) return () => clearInterval(timer)
+
     getNotifications()
       .then(res => {
         if (res.data) {
@@ -46,9 +52,18 @@ export default function Topbar({ title }: TopbarProps) {
       })
       .catch(() => {}) // fail silently — user still sees UI
     return () => clearInterval(timer)
-  }, [])
+  }, [isGuest, session?.user])
 
   const openNotifs = () => {
+    if (isGuest) {
+      requestLogin({
+        title: 'Notificacoes protegidas',
+        message: 'Entra na tua conta para veres notificacoes e atividade pessoal.',
+        returnTo: '/feed',
+      })
+      return
+    }
+
     setNotifOpen(true)
     if (hasUnread) {
       markAllAsRead().then(() => {

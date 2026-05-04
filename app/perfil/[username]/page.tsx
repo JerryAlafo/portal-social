@@ -7,6 +7,7 @@ import { MapPin, Link2, Calendar, MoreHorizontal, Share2, Edit3, Loader2, UserPl
 import Link from 'next/link'
 import Topbar from '@/components/layout/Topbar'
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll'
+import { useGuestMode } from '@/components/layout/GuestModeProvider'
 
 const TABS = ['Publicacoes', 'Galeria', 'Gostos', 'Fanfics']
 
@@ -163,6 +164,7 @@ export default function UserProfilePage() {
   const params = useParams()
   const username = params.username as string
   const { data: session } = useSession()
+  const { isGuest, requestLogin } = useGuestMode()
   const [activeTab, setActiveTab] = useState('Publicacoes')
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -186,7 +188,7 @@ export default function UserProfilePage() {
 
   // Load profile + verify following status (like likes pattern)
   useEffect(() => {
-    if (!username || !session?.user?.id) return
+    if (!username) return
 
     async function loadProfile() {
       setLoading(true)
@@ -198,7 +200,7 @@ export default function UserProfilePage() {
           setPosts(json.data || [])
 
           // Immediately verify following status via API (like likes)
-          if (!isOwnProfile) {
+          if (session?.user?.id && !isOwnProfile) {
             try {
               const checkRes = await fetch(`/api/following?check=${json.profile.id}`)
               const checkJson = await checkRes.json()
@@ -215,7 +217,7 @@ export default function UserProfilePage() {
       }
     }
     loadProfile()
-  }, [username, session?.user?.id])
+  }, [username, session?.user?.id, session?.user?.username, isOwnProfile])
 
   const loadTabData = useCallback(async (page: number, append: boolean) => {
     if (!profile?.id || !username) return
@@ -281,6 +283,14 @@ export default function UserProfilePage() {
 
   const handleFollow = async () => {
     if (!profile) return
+
+    if (isGuest) {
+      requestLogin({
+        title: 'Seguir requer login',
+        message: 'Entra na tua conta para seguir membros.',
+      })
+      return
+    }
 
     const wasFollowing = following
 
@@ -439,7 +449,7 @@ export default function UserProfilePage() {
                   {profile.level && <span className="perfil-badge-level">Nivel {profile.level}</span>}
                 </div>
               </div>
-              {!isOwnProfile && session && (
+              {!isOwnProfile && (
                 <div className="perfil-profile-actions">
                   <button 
                     className={`perfil-follow-btn ${following ? 'perfil-following' : ''}`}
@@ -448,7 +458,20 @@ export default function UserProfilePage() {
                     {following ? <UserCheck size={14} /> : <UserPlus size={14} />}
                     {following ? 'Seguindo' : 'Seguir'}
                   </button>
-                  <Link href={`/mensagens?user=${profile.id}`} className="perfil-msg-btn">
+                  <Link
+                    href={`/mensagens?user=${profile.id}`}
+                    className="perfil-msg-btn"
+                    onClick={(event) => {
+                      if (isGuest) {
+                        event.preventDefault()
+                        requestLogin({
+                          title: 'Mensagens protegidas',
+                          message: 'Entra na tua conta para enviar mensagens.',
+                          returnTo: `/mensagens?user=${profile.id}`,
+                        })
+                      }
+                    }}
+                  >
                     <MessageCircle size={14} />
                   </Link>
                   <button className="perfil-icon-btn" onClick={handleShareProfile}>

@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import Topbar from '@/components/layout/Topbar'
 import { uploadImage } from '@/services/upload'
 import { useToast } from '@/hooks/useToast'
+import { useGuestMode } from '@/components/layout/GuestModeProvider'
 import styles from './page.module.css'
 
 const CATS = ['Tudo', 'Arte', 'Cosplay', 'Screenshots', 'Fanart', 'Figura']
@@ -33,6 +34,7 @@ interface GalleryItem {
 export default function GaleriaPage() {
   const { data: session } = useSession()
   const { showToast } = useToast()
+  const { isGuest, requestLogin } = useGuestMode()
   const [activeCat, setActiveCat] = useState('Tudo')
   const [items, setItems] = useState<GalleryItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -84,8 +86,19 @@ export default function GaleriaPage() {
   )
   const lightboxItem = items.find(i => i.id === lightbox)
 
+  const requireLogin = (detail?: { title?: string; message?: string; returnTo?: string }) => {
+    if (!isGuest && session?.user) return true
+
+    requestLogin(detail)
+    return false
+  }
+
   const toggleLike = async (id: string) => {
-    if (!session) return
+    if (!requireLogin({
+      title: 'Like protegido',
+      message: 'Entra na tua conta para gostar de imagens da galeria.',
+    })) return
+
     const wasLiked = liked.has(id)
     setLiked(prev => { const n = new Set(prev); wasLiked ? n.delete(id) : n.add(id); return n })
     try {
@@ -145,6 +158,11 @@ export default function GaleriaPage() {
   }
 
   const handleUpload = async () => {
+    if (!requireLogin({
+      title: 'Publicacao protegida',
+      message: 'Entra ou cria uma conta para publicar na galeria.',
+    })) return
+
     if (!uploadFile || !uploadTitle.trim() || uploading) return
     setUploading(true)
     try {
@@ -179,6 +197,11 @@ export default function GaleriaPage() {
   }
 
   const openUploadModal = () => {
+    if (!requireLogin({
+      title: 'Publicacao protegida',
+      message: 'Entra ou cria uma conta para publicar na galeria.',
+    })) return
+
     setUploadTitle('')
     setUploadCategory('Arte')
     setUploadFile(null)

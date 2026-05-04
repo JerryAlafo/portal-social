@@ -12,6 +12,7 @@ import { getEvents } from '@/services/events'
 import { toggleFollow } from '@/services/following'
 import { uploadImage } from '@/services/upload'
 import FeatureUnavailableModal from '@/components/ui/FeatureUnavailableModal'
+import { useGuestMode } from '@/components/layout/GuestModeProvider'
 import type { Post, TrendingTag, Profile, Event } from '@/types'
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll'
 
@@ -24,6 +25,7 @@ function fmt(n: number) {
 
 export default function FeedPage() {
   const { data: session } = useSession()
+  const { isGuest, requestLogin } = useGuestMode()
 
   const [activeCategory, setActiveCategory] = useState('Tudo')
   const [activeTab,      setActiveTab]      = useState('Geral')
@@ -51,6 +53,13 @@ export default function FeedPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const composeRef = useRef<HTMLDivElement>(null)
+
+  const requireLogin = useCallback((detail?: { title?: string; message?: string; returnTo?: string }) => {
+    if (!isGuest) return true
+
+    requestLogin(detail)
+    return false
+  }, [isGuest, requestLogin])
 
   const loadPage = useCallback(async (targetPage: number, append: boolean) => {
     let filter: string | undefined
@@ -118,6 +127,11 @@ export default function FeedPage() {
   }
 
   const handleLike = async (id: string) => {
+    if (!requireLogin({
+      title: 'Like protegido',
+      message: 'Entra na tua conta para guardar gostos e interagir com publicacoes.',
+    })) return
+
     const post = posts.find(p => p.id === id)
     if (!post) return
     setPosts(prev => prev.map(p =>
@@ -135,6 +149,11 @@ export default function FeedPage() {
   }
 
   const handlePublish = async () => {
+    if (!requireLogin({
+      title: 'Publicacao protegida',
+      message: 'Entra ou cria uma conta para publicar no PORTAL.',
+    })) return
+
     if (!composeText.trim() || publishing) return
     setPublishing(true)
     setPublishError('')
@@ -169,6 +188,14 @@ export default function FeedPage() {
   }
 
   const handleImagePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!requireLogin({
+      title: 'Upload protegido',
+      message: 'Entra na tua conta para anexar imagens e publicar.',
+    })) {
+      e.target.value = ''
+      return
+    }
+
     const file = e.target.files?.[0]
     if (!file) return
     setImagePreview(URL.createObjectURL(file))
@@ -182,6 +209,11 @@ export default function FeedPage() {
   }
 
   const handleFollow = async (userId: string, username: string) => {
+    if (!requireLogin({
+      title: 'Seguir requer login',
+      message: 'Entra na tua conta para seguir membros e montar o teu feed.',
+    })) return
+
     setFollowed(prev => {
       const next = new Set(prev)
       if (next.has(username)) {
@@ -260,10 +292,26 @@ export default function FeedPage() {
               <div
                 ref={composeRef}
                 className="feed-compose-input"
-                contentEditable
+                contentEditable={!isGuest}
                 suppressContentEditableWarning
+                onClick={() => {
+                  if (isGuest) {
+                    requestLogin({
+                      title: 'Publicacao protegida',
+                      message: 'Entra ou cria uma conta para publicar no PORTAL.',
+                    })
+                  }
+                }}
+                onFocus={() => {
+                  if (isGuest) {
+                    requestLogin({
+                      title: 'Publicacao protegida',
+                      message: 'Entra ou cria uma conta para publicar no PORTAL.',
+                    })
+                  }
+                }}
                 onInput={e => setComposeText((e.target as HTMLDivElement).textContent ?? '')}
-                data-placeholder={`O que estas a pensar, ${firstName}?`}
+                data-placeholder={isGuest ? 'Entra para publicar no PORTAL' : `O que estas a pensar, ${firstName}?`}
               />
             </div>
 
@@ -283,11 +331,18 @@ export default function FeedPage() {
 
             <div className="feed-compose-actions">
               <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" style={{ display: 'none' }} onChange={handleImagePick} />
-              <button className="feed-compose-btn" onClick={() => fileInputRef.current?.click()}>
+              <button className="feed-compose-btn" onClick={() => {
+                if (requireLogin({
+                  title: 'Upload protegido',
+                  message: 'Entra na tua conta para anexar imagens e publicar.',
+                })) {
+                  fileInputRef.current?.click()
+                }
+              }}>
                 <ImageIcon size={15} /> Imagem
               </button>
-              <button className="feed-compose-btn" onClick={() => setShowFeatureModal(true)}><Film size={15} /> Video</button>
-              <button className="feed-compose-btn" onClick={() => setShowFeatureModal(true)}><FileText size={15} /> Artigo</button>
+              <button className="feed-compose-btn" onClick={() => requireLogin() && setShowFeatureModal(true)}><Film size={15} /> Video</button>
+              <button className="feed-compose-btn" onClick={() => requireLogin() && setShowFeatureModal(true)}><FileText size={15} /> Artigo</button>
               <select className="feed-compose-select" value={composeCategory} onChange={e => setComposeCategory(e.target.value)}>
                 {CATEGORIES.filter(c => c !== 'Tudo').map(c => (
                   <option key={c} value={c}>{c}</option>
@@ -296,7 +351,7 @@ export default function FeedPage() {
               <button
                 type="button"
                 className={`feed-compose-btn ${composeSpoiler ? 'feed-compose-btn-active' : ''}`}
-                onClick={() => setComposeSpoiler(v => !v)}
+                onClick={() => requireLogin() && setComposeSpoiler(v => !v)}
                 title="Marcar como spoiler"
               >
                 <AlertTriangle size={15} /> Spoiler
@@ -304,7 +359,7 @@ export default function FeedPage() {
               <button
                 type="button"
                 className={`feed-compose-btn ${composeSensitive ? 'feed-compose-btn-sensitive' : ''}`}
-                onClick={() => setComposeSensitive(v => !v)}
+                onClick={() => requireLogin() && setComposeSensitive(v => !v)}
                 title="Marcar como conteúdo sensível"
               >
                 <AlertTriangle size={15} /> Sensível
@@ -326,7 +381,18 @@ export default function FeedPage() {
 
           <div className="feed-tabs">
             {TABS.map(t => (
-              <button key={t} className={`feed-tab ${activeTab === t ? 'feed-tab-active' : ''}`} onClick={() => setActiveTab(t)}>
+              <button
+                key={t}
+                className={`feed-tab ${activeTab === t ? 'feed-tab-active' : ''}`}
+                onClick={() => {
+                  if (t === 'A seguir' && !requireLogin({
+                    title: 'Feed pessoal protegido',
+                    message: 'Entra na tua conta para veres publicacoes de quem segues.',
+                    returnTo: '/seguindo',
+                  })) return
+                  setActiveTab(t)
+                }}
+              >
                 {t}
               </button>
             ))}

@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { ExternalLink, RefreshCw, Newspaper } from 'lucide-react'
 import Topbar from '@/components/layout/Topbar'
+import { useGuestMode } from '@/components/layout/GuestModeProvider'
+import { isGuestModeActive } from '@/lib/guest-mode'
 import styles from './page.module.css'
 
 const CATS = ['Tudo', 'Anime', 'Manga', 'Industria', 'Eventos', 'PORTAL']
@@ -27,8 +29,33 @@ export default function NoticiasPage() {
   const [news, setNews] = useState<NewsItem[]>([])
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { isGuest, requestLogin } = useGuestMode()
+
+  const loadStoredNews = async () => {
+    setGenerating(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/news')
+      const data = await res.json()
+      if (data.data) setNews(data.data)
+      if (data.error) setError(data.error)
+    } catch {
+      setError('Erro ao carregar noticias.')
+    } finally {
+      setGenerating(false)
+    }
+  }
 
   const generateNews = async () => {
+    if (isGuest || isGuestModeActive()) {
+      requestLogin({
+        title: 'Atualizacao protegida',
+        message: 'Entra na tua conta para gerar novas noticias com IA.',
+        returnTo: '/noticias',
+      })
+      return
+    }
+
     setGenerating(true)
     setError(null)
     try {
@@ -52,8 +79,13 @@ export default function NoticiasPage() {
   }
 
   useEffect(() => {
+    if (isGuest || isGuestModeActive()) {
+      loadStoredNews()
+      return
+    }
+
     generateNews()
-  }, [])
+  }, [isGuest])
 
   const filtered = activeCat === 'Tudo' ? news : news.filter(n => 
     n.category?.toLowerCase().includes(activeCat.toLowerCase())

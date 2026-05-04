@@ -8,6 +8,7 @@ import Topbar from '@/components/layout/Topbar'
 import { search } from '@/services/search'
 import { getTrending } from '@/services/trending'
 import { toggleFollow } from '@/services/following'
+import { useGuestMode } from '@/components/layout/GuestModeProvider'
 import type { Profile, Post, TrendingTag } from '@/types'
 
 const TABS = ['Tudo', 'Publicacoes', 'Membros', 'Tags', 'Fanfics']
@@ -25,6 +26,7 @@ function PesquisarContent() {
   const [results, setResults] = useState<{ users: Profile[]; posts: Post[]; tags: TrendingTag[] }>({ users: [], posts: [], tags: [] })
   const [trending, setTrending] = useState<TrendingTag[]>([])
   const [followed, setFollowed] = useState<Set<string>>(new Set())
+  const { isGuest, requestLogin } = useGuestMode()
 
   useEffect(() => {
     getTrending().then(r => { if (r.data) setTrending(r.data) }).catch(() => {})
@@ -50,6 +52,14 @@ function PesquisarContent() {
   const hasQuery = query.trim().length > 0
 
   const handleFollow = async (userId: string, username: string) => {
+    if (isGuest) {
+      requestLogin({
+        title: 'Seguir requer login',
+        message: 'Entra na tua conta para seguir membros.',
+      })
+      return
+    }
+
     const next = new Set(followed)
     next.has(username) ? next.delete(username) : next.add(username)
     setFollowed(next)
@@ -134,7 +144,20 @@ function PesquisarContent() {
                       {u.bio && <span className="pesquisar-user-bio">{u.bio}</span>}
                     </div>
                     <div className="pesquisar-user-actions">
-                      <Link href={`/mensagens?user=${u.id}`} className="pesquisar-msg-btn">
+                      <Link
+                        href={`/mensagens?user=${u.id}`}
+                        className="pesquisar-msg-btn"
+                        onClick={(event) => {
+                          if (isGuest) {
+                            event.preventDefault()
+                            requestLogin({
+                              title: 'Mensagens protegidas',
+                              message: 'Entra na tua conta para enviar mensagens.',
+                              returnTo: `/mensagens?user=${u.id}`,
+                            })
+                          }
+                        }}
+                      >
                         <MessageCircle size={14} />
                       </Link>
                       <button

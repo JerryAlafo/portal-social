@@ -5,6 +5,7 @@ import { Heart, Eye, Clock, Plus, X, Share2 } from 'lucide-react'
 import Topbar from '@/components/layout/Topbar'
 import { useToast } from '@/hooks/useToast'
 import { toggleFanficLike } from '@/services/fanfics'
+import { useGuestMode } from '@/components/layout/GuestModeProvider'
 import styles from './page.module.css'
 
 const GENRES = ['Tudo', 'Isekai', 'Shonen', 'Shojo', 'Seinen', 'Romance', 'Aventura', 'Comedia']
@@ -49,6 +50,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function FanficsPage() {
   const { showToast } = useToast()
+  const { isGuest, requestLogin } = useGuestMode()
   const [activeGenre, setActiveGenre] = useState('Tudo')
   const [activeStatus, setActiveStatus] = useState('Todos')
   const [fanfics, setFanfics] = useState<Fanfic[]>([])
@@ -117,7 +119,19 @@ export default function FanficsPage() {
     return date.toLocaleDateString('pt-PT')
   }
 
+  const requireLogin = (detail?: { title?: string; message?: string; returnTo?: string }) => {
+    if (!isGuest) return true
+
+    requestLogin(detail)
+    return false
+  }
+
   const handleLike = async (fanficId: string) => {
+    if (!requireLogin({
+      title: 'Like protegido',
+      message: 'Entra na tua conta para gostar de fanfics.',
+    })) return
+
     const fanfic = fanfics.find(f => f.id === fanficId)
     if (!fanfic) return
 
@@ -175,6 +189,11 @@ export default function FanficsPage() {
   }
 
   const handleCreateFanfic = async () => {
+    if (!requireLogin({
+      title: 'Publicacao protegida',
+      message: 'Entra ou cria uma conta para publicar fanfics.',
+    })) return
+
     if (!newFanfic.title.trim() || !newFanfic.summary.trim() || creating) return
 
     if (!newFanfic.fandom.trim()) {
@@ -284,7 +303,13 @@ export default function FanficsPage() {
         <div className={styles.mainCol}>
           <div className={styles.controls}>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-              <button className={styles.readBtn} onClick={() => setShowCreateModal(true)}>
+              <button
+                className={styles.readBtn}
+                onClick={() => requireLogin({
+                  title: 'Publicacao protegida',
+                  message: 'Entra ou cria uma conta para publicar fanfics.',
+                }) && setShowCreateModal(true)}
+              >
                 <Plus size={14} /> Publicar fanfic
               </button>
             </div>

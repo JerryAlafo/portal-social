@@ -5,7 +5,7 @@ import { createServerClient } from '@/lib/supabase-server'
 export async function GET() {
   try {
     const session = await auth()
-    if (!session) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
+    if (!session) return NextResponse.json({ data: [], error: null })
 
     const supabase = createServerClient()
 
@@ -18,18 +18,17 @@ export async function GET() {
 
     if (error) throw error
 
-    const filtered = (data ?? []).filter(n => n.actor !== null)
+    const filtered = (data ?? []).filter((n) => n.actor !== null)
     return NextResponse.json({ data: filtered, error: null })
   } catch {
-    return NextResponse.json({ error: 'Erro ao carregar notificações.' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro ao carregar notificacoes.' }, { status: 500 })
   }
 }
 
-// Mark all as read
 export async function PATCH() {
   try {
     const session = await auth()
-    if (!session) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
+    if (!session) return NextResponse.json({ error: 'Nao autenticado.' }, { status: 401 })
 
     const supabase = createServerClient()
 
@@ -41,6 +40,6 @@ export async function PATCH() {
 
     return NextResponse.json({ data: null, error: null })
   } catch {
-    return NextResponse.json({ error: 'Erro ao atualizar notificações.' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro ao atualizar notificacoes.' }, { status: 500 })
   }
 }

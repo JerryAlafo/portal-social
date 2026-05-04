@@ -6,8 +6,6 @@ import { hitRateLimit } from '@/lib/rate-limit'
 export async function GET(request: Request) {
   try {
     const session = await auth()
-    if (!session) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
-
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') ?? '1')
     const limit = parseInt(searchParams.get('limit') ?? '20')
@@ -27,12 +25,16 @@ export async function GET(request: Request) {
       .range(offset, offset + limit - 1)
 
     if (filter === 'following') {
+      if (!session?.user?.id) {
+        return NextResponse.json({ data: [], page, limit, error: null })
+      }
+
       const { data: following } = await supabase
         .from('follows')
         .select('following_id')
         .eq('follower_id', session.user.id)
-      
-      const followingIds = following?.map(f => f.following_id) ?? []
+
+      const followingIds = following?.map((f) => f.following_id) ?? []
       if (followingIds.length > 0) {
         query = query.in('author_id', followingIds)
       } else {
@@ -52,18 +54,19 @@ export async function GET(request: Request) {
 
     if (error) throw error
 
-    const validPosts = (posts ?? []).filter(p => p.author !== null)
+    const validPosts = (posts ?? []).filter((p) => p.author !== null)
+    const postIds = validPosts.map((p) => p.id)
 
-    // Check which posts the current user has liked
-    const postIds = validPosts.map(p => p.id)
-    const { data: likes } = await supabase
-      .from('post_likes')
-      .select('post_id')
-      .eq('user_id', session.user.id)
-      .in('post_id', postIds)
+    const likes = session?.user?.id && postIds.length > 0
+      ? (await supabase
+        .from('post_likes')
+        .select('post_id')
+        .eq('user_id', session.user.id)
+        .in('post_id', postIds)).data
+      : []
 
-    const likedSet = new Set(likes?.map(l => l.post_id))
-    const postsWithLikes = validPosts.map(p => ({ ...p, liked_by_me: likedSet.has(p.id) }))
+    const likedSet = new Set(likes?.map((l) => l.post_id))
+    const postsWithLikes = validPosts.map((p) => ({ ...p, liked_by_me: likedSet.has(p.id) }))
 
     return NextResponse.json({ data: postsWithLikes, page, limit, error: null })
   } catch {
@@ -74,18 +77,18 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const session = await auth()
-    if (!session) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
+    if (!session) return NextResponse.json({ error: 'Nao autenticado.' }, { status: 401 })
 
     const { content, category, image_url, is_spoiler, is_sensitive } = await request.json()
 
     if (!content?.trim()) {
-      return NextResponse.json({ error: 'O conteúdo não pode estar vazio.' }, { status: 400 })
+      return NextResponse.json({ error: 'O conteudo nao pode estar vazio.' }, { status: 400 })
     }
 
     const isFlooding = hitRateLimit(`post:${session.user.id}`, 5, 5 * 60_000)
     if (isFlooding) {
       return NextResponse.json(
-        { error: 'Estás a publicar demasiado rápido. Tenta novamente em instantes.' },
+        { error: 'Estas a publicar demasiado rapido. Tenta novamente em instantes.' },
         { status: 429 }
       )
     }
@@ -103,17 +106,22 @@ export async function POST(request: Request) {
       return await supabase
         .from('posts')
         .insert(payload)
-        .select(`*, author:profiles!posts_author_id_fkey(id, username, display_name, avatar_initials, avatar_url, role)`)
+        .select('*, author:profiles!posts_author_id_fkey(id, username, display_name, avatar_initials, avatar_url, role)')
         .single()
     }
 
-    let insertRes = await tryInsert({ ...baseInsert, is_spoiler: Boolean(is_spoiler), is_sensitive: Boolean(is_sensitive) })
+    let insertRes = await tryInsert({
+      ...baseInsert,
+      is_spoiler: Boolean(is_spoiler),
+      is_sensitive: Boolean(is_sensitive),
+    })
+
     if (insertRes.error) {
       const msg = String(insertRes.error.message || '')
-      // Backwards-compatible: if DB doesn't have is_spoiler/is_sensitive yet, retry without them.
       if (msg.toLowerCase().includes('is_spoiler') && msg.toLowerCase().includes('does not exist')) {
         insertRes = await tryInsert({ ...baseInsert, is_sensitive: Boolean(is_sensitive) })
       }
+
       if (insertRes.error) {
         const msg2 = String(insertRes.error.message || '')
         if (msg2.toLowerCase().includes('is_sensitive') && msg2.toLowerCase().includes('does not exist')) {
@@ -133,8 +141,9 @@ export async function POST(request: Request) {
         lower.includes('column') ||
         lower.includes('schema') ||
         lower.includes('relation')
+
       return NextResponse.json(
-        { error: msg || 'Erro ao criar publicação.' },
+        { error: msg || 'Erro ao criar publicacao.' },
         { status: isSchemaError ? 400 : 500 }
       )
     }
@@ -163,6 +172,7 @@ export async function POST(request: Request) {
       err && typeof err === 'object' && 'message' in err
         ? String((err as { message?: unknown }).message ?? '')
         : ''
-    return NextResponse.json({ error: msg || 'Erro ao criar publicação.' }, { status: 500 })
+
+    return NextResponse.json({ error: msg || 'Erro ao criar publicacao.' }, { status: 500 })
   }
 }

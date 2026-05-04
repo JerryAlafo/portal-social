@@ -135,9 +135,10 @@ export const authOptions: NextAuthConfig = {
                 provider: 'google',
               },
             }))
-          } catch (createErr: any) {
+          } catch (createErr: unknown) {
+            const createError = createErr as { status?: number; code?: string }
             // Handle case where user was created between listUsers and createUser
-            if (createErr?.status === 422 || createErr?.code === 'email_exists') {
+            if (createError.status === 422 || createError.code === 'email_exists') {
               // Try to get the user again
               const retry = await supabase.auth.admin.listUsers()
               existingUser = retry.data?.users.find(u => u.email === user.email)

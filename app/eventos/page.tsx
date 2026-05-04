@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Calendar, MapPin, Users, Clock, ExternalLink } from 'lucide-react'
 import Topbar from '@/components/layout/Topbar'
+import { useGuestMode } from '@/components/layout/GuestModeProvider'
 import styles from './page.module.css'
 
 interface Event {
@@ -27,6 +28,7 @@ export default function EventosPage() {
   const [loading, setLoading] = useState(true)
   const [interested, setInterested] = useState<Set<string>>(new Set())
   const [going, setGoing] = useState<Set<string>>(new Set())
+  const { isGuest, requestLogin } = useGuestMode()
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -43,7 +45,15 @@ export default function EventosPage() {
     fetchEvents()
   }, [])
 
-  const toggle = (set: Set<string>, setFn: React.Dispatch<React.SetStateAction<Set<string>>>, id: string) => {
+  const toggle = (setFn: React.Dispatch<React.SetStateAction<Set<string>>>, id: string) => {
+    if (isGuest) {
+      requestLogin({
+        title: 'Evento protegido',
+        message: 'Entra na tua conta para marcar interesse ou confirmar presenca.',
+      })
+      return
+    }
+
     setFn(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
   }
 
@@ -129,13 +139,13 @@ export default function EventosPage() {
                     <div className={styles.eventBtns}>
                       <button
                         className={`${styles.intBtn} ${interested.has(ev.id) ? styles.intActive : ''}`}
-                        onClick={() => toggle(interested, setInterested, ev.id)}
+                        onClick={() => toggle(setInterested, ev.id)}
                       >
                         {interested.has(ev.id) ? 'Interessado' : 'Tenho interesse'}
                       </button>
                       <button
                         className={`${styles.goBtn} ${going.has(ev.id) ? styles.goActive : ''}`}
-                        onClick={() => toggle(going, setGoing, ev.id)}
+                        onClick={() => toggle(setGoing, ev.id)}
                       >
                         {going.has(ev.id) ? 'Vou' : 'Confirmar presenca'}
                       </button>

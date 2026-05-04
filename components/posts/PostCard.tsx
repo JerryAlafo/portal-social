@@ -8,6 +8,7 @@ import { Heart, MessageCircle, Share2, MoreHorizontal, Send, Loader2, Check, Cop
 import type { Post, Comment } from '@/types'
 import { getComments, addComment, editComment, deleteComment, likeComment } from '@/services/comments'
 import { reportPost } from '@/services/posts'
+import { useGuestMode } from '@/components/layout/GuestModeProvider'
 import styles from './PostCard.module.css'
 
 interface PostCardProps {
@@ -140,6 +141,7 @@ function CommentItem({ comment, myId, myRole, onDelete, onEdit, onLike, onReply,
 
 export default function PostCard({ post, onDelete, onLike, onReport }: PostCardProps) {
   const { data: session } = useSession()
+  const { isGuest, requestLogin } = useGuestMode()
 
   const [menuOpen, setMenuOpen] = useState(false)
   const [commentsOpen, setCommentsOpen] = useState(false)
@@ -193,6 +195,13 @@ export default function PostCard({ post, onDelete, onLike, onReport }: PostCardP
     setMenuOpen(false)
     setMenuPosition(null)
   }, [])
+
+  const requireLogin = useCallback((detail?: { title?: string; message?: string; returnTo?: string }) => {
+    if (!isGuest) return true
+
+    requestLogin(detail)
+    return false
+  }, [isGuest, requestLogin])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -257,6 +266,11 @@ export default function PostCard({ post, onDelete, onLike, onReport }: PostCardP
   }
 
   const handleSubmitComment = async () => {
+    if (!requireLogin({
+      title: 'Comentario protegido',
+      message: 'Entra na tua conta para comentar publicacoes.',
+    })) return
+
     if (!commentText.trim() || submitting) return
     setSubmitting(true)
     try {
@@ -277,6 +291,8 @@ export default function PostCard({ post, onDelete, onLike, onReport }: PostCardP
   }
 
   const handleEditComment = async (commentId: string, content: string) => {
+    if (!requireLogin()) return
+
     try {
       const res = await editComment(post.id, commentId, content)
       if (res.data) {
@@ -293,6 +309,8 @@ export default function PostCard({ post, onDelete, onLike, onReport }: PostCardP
   }
 
   const handleDeleteComment = async (commentId: string) => {
+    if (!requireLogin()) return
+
     try {
       await deleteComment(post.id, commentId)
       if (replyingTo) {
@@ -307,6 +325,11 @@ export default function PostCard({ post, onDelete, onLike, onReport }: PostCardP
   }
 
   const handleLikeComment = async (commentId: string) => {
+    if (!requireLogin({
+      title: 'Like protegido',
+      message: 'Entra na tua conta para gostar de comentarios.',
+    })) return
+
     try {
       const res = await likeComment(post.id, commentId)
       if (res.data) {
@@ -334,6 +357,11 @@ export default function PostCard({ post, onDelete, onLike, onReport }: PostCardP
   }
 
   const handleReply = (parentId: string) => {
+    if (!requireLogin({
+      title: 'Resposta protegida',
+      message: 'Entra na tua conta para responder comentarios.',
+    })) return
+
     setReplyingTo(parentId)
     const parentComment = comments.find(c => c.id === parentId)
     if (parentComment && parentComment.author) {
@@ -364,6 +392,11 @@ export default function PostCard({ post, onDelete, onLike, onReport }: PostCardP
   }
 
   const handleOpenReport = () => {
+    if (!requireLogin({
+      title: 'Denuncia protegida',
+      message: 'Entra na tua conta para denunciar conteudo.',
+    })) return
+
     closeMenu()
     setReportModalOpen(true)
     setReportReason('')
@@ -371,6 +404,8 @@ export default function PostCard({ post, onDelete, onLike, onReport }: PostCardP
   }
 
   const handleSubmitReport = async () => {
+    if (!requireLogin()) return
+
     if (!reportReason || reportSubmitting) return
     setReportSubmitting(true)
     try {
@@ -490,7 +525,14 @@ export default function PostCard({ post, onDelete, onLike, onReport }: PostCardP
       <div className={styles.actions}>
         <button
           className={`${styles.actionBtn} ${post.liked_by_me ? styles.liked : ''}`}
-          onClick={() => onLike?.(post.id)}
+          onClick={() => {
+            if (requireLogin({
+              title: 'Like protegido',
+              message: 'Entra na tua conta para guardar gostos e interagir com publicacoes.',
+            })) {
+              onLike?.(post.id)
+            }
+          }}
         >
           <Heart size={15} fill={post.liked_by_me ? 'currentColor' : 'none'} />
           <span>{fmt(post.likes_count)}</span>
@@ -571,6 +613,14 @@ export default function PostCard({ post, onDelete, onLike, onReport }: PostCardP
                 placeholder={replyingTo && replyingToComment?.author ? `Responder a ${replyingToComment.author.username}...` : 'Adicionar um comentário...'}
                 value={commentText}
                 onChange={e => setCommentText(e.target.value)}
+                onFocus={() => {
+                  if (isGuest) {
+                    requestLogin({
+                      title: 'Comentario protegido',
+                      message: 'Entra na tua conta para comentar publicacoes.',
+                    })
+                  }
+                }}
                 onKeyDown={e => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault()

@@ -11,7 +11,6 @@ export async function GET(request: Request) {
 
     const supabase = createServerClient()
     const session = await auth()
-    if (!session) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
 
     let query = supabase
       .from('fanfics')
@@ -28,15 +27,17 @@ export async function GET(request: Request) {
 
     if (error) throw error
 
-    const fanficIds = data?.map(f => f.id) ?? []
-    const { data: likes } = await supabase
-      .from('fanfic_likes')
-      .select('fanfic_id')
-      .eq('user_id', session.user.id)
-      .in('fanfic_id', fanficIds)
+    const fanficIds = data?.map((f) => f.id) ?? []
+    const likes = session?.user?.id && fanficIds.length > 0
+      ? (await supabase
+        .from('fanfic_likes')
+        .select('fanfic_id')
+        .eq('user_id', session.user.id)
+        .in('fanfic_id', fanficIds)).data
+      : []
 
-    const likedSet = new Set(likes?.map(l => l.fanfic_id))
-    const fanficsWithLikes = data?.map(f => ({ ...f, liked_by_me: likedSet.has(f.id) })) ?? []
+    const likedSet = new Set(likes?.map((l) => l.fanfic_id))
+    const fanficsWithLikes = data?.map((f) => ({ ...f, liked_by_me: likedSet.has(f.id) })) ?? []
 
     return NextResponse.json({ data: fanficsWithLikes, error: null })
   } catch (err) {
@@ -48,7 +49,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const session = await auth()
-    if (!session) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
+    if (!session) return NextResponse.json({ error: 'Nao autenticado.' }, { status: 401 })
 
     const body = await request.json()
     const title = String(body?.title ?? '').trim()
@@ -57,8 +58,8 @@ export async function POST(request: Request) {
     const fandom = String(body?.fandom ?? '').trim()
     const statusInput = String(body?.status ?? 'Em curso').trim()
 
-    if (!title) return NextResponse.json({ error: 'Título é obrigatório.' }, { status: 400 })
-    if (!synopsis) return NextResponse.json({ error: 'Resumo é obrigatório.' }, { status: 400 })
+    if (!title) return NextResponse.json({ error: 'Titulo e obrigatorio.' }, { status: 400 })
+    if (!synopsis) return NextResponse.json({ error: 'Resumo e obrigatorio.' }, { status: 400 })
     if (hitRateLimit(`fanfic:${session.user.id}`, 3, 5 * 60_000)) {
       return NextResponse.json({ error: 'Muitas fanfics criadas em pouco tempo.' }, { status: 429 })
     }

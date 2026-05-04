@@ -20,10 +20,12 @@ function OnboardingInner() {
   // Load user data from session
   useEffect(() => {
     if (session?.user?.name) {
-      setValues((prev) => ({
-        ...prev,
-        displayName: session.user.name || '',
-      }))
+      window.setTimeout(() => {
+        setValues((prev) => ({
+          ...prev,
+          displayName: session.user.name || '',
+        }))
+      }, 0)
     }
   }, [session?.user?.name])
 

@@ -128,6 +128,14 @@
   background: var(--red-bg) !important;
 }
 
+.navLogin {
+  color: var(--accent2) !important;
+}
+
+.navLogin:hover {
+  background: var(--accent-glow) !important;
+}
+
 .badge {
   margin-left: auto;
   background: var(--accent);

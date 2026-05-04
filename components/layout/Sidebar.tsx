@@ -1,5 +1,6 @@
 'use client'
 
+import type { MouseEvent } from 'react'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import NextImage from 'next/image'
@@ -7,11 +8,13 @@ import { usePathname } from 'next/navigation'
 import {
   Home, Search, Heart, MessageCircle, TrendingUp,
   BookOpen, Calendar, Layers, Image as ImageIcon, User, Settings,
-  LogOut, Star, ShieldAlert, X, Sparkles
+  LogOut, Star, ShieldAlert, X, Sparkles, LogIn
 } from 'lucide-react'
 import { useSidebar } from '@/lib/sidebar-context'
 import { useSession } from 'next-auth/react'
 import { logout } from '@/services/auth'
+import { isGuestBlockedPath } from '@/lib/guest-mode'
+import { useGuestMode } from './GuestModeProvider'
 import styles from './Sidebar.module.css'
 
 const navMain = [
@@ -40,6 +43,7 @@ export default function Sidebar() {
   const pathname = usePathname()
   const { isOpen, close } = useSidebar()
   const { data: session } = useSession()
+  const { isGuest, requestLogin } = useGuestMode()
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [unreadNotifications, setUnreadNotifications] = useState(0)
 
@@ -70,6 +74,17 @@ export default function Sidebar() {
   const role = user?.role ?? 'member'
   const isAdmin = role === 'superuser' || role === 'mod'
 
+  const handleNavClick = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (isGuest && isGuestBlockedPath(href)) {
+      event.preventDefault()
+      close()
+      requestLogin({ returnTo: href })
+      return
+    }
+
+    close()
+  }
+
   return (
     <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`}>
       <div className={styles.logo}>
@@ -94,7 +109,7 @@ export default function Sidebar() {
               key={href}
               href={href}
               className={`${styles.navItem} ${pathname === href ? styles.active : ''}`}
-              onClick={close}
+              onClick={(event) => handleNavClick(event, href)}
             >
               <Icon size={18} />
               {label}
@@ -113,7 +128,7 @@ export default function Sidebar() {
             key={href}
             href={href}
             className={`${styles.navItem} ${pathname === href ? styles.active : ''}`}
-            onClick={close}
+            onClick={(event) => handleNavClick(event, href)}
           >
             <Icon size={18} />
             {label}
@@ -128,24 +143,34 @@ export default function Sidebar() {
               key={href}
               href={href}
               className={`${styles.navItem} ${pathname.startsWith(href) ? styles.active : ''}`}
-              onClick={close}
+              onClick={(event) => handleNavClick(event, href)}
             >
               <Icon size={18} />
               {label}
             </Link>
           )
         })}
-        <button
-          className={`${styles.navItem} ${styles.navDanger}`}
-          onClick={() => { close(); logout() }}
-        >
-          <LogOut size={18} />
-          Sair
-        </button>
+        {isGuest ? (
+          <button
+            className={`${styles.navItem} ${styles.navLogin}`}
+            onClick={() => { close(); requestLogin({ returnTo: pathname }) }}
+          >
+            <LogIn size={18} />
+            Entrar ou criar conta
+          </button>
+        ) : (
+          <button
+            className={`${styles.navItem} ${styles.navDanger}`}
+            onClick={() => { close(); logout() }}
+          >
+            <LogOut size={18} />
+            Sair
+          </button>
+        )}
       </nav>
 
       <div className={styles.footer}>
-        <Link href="/perfil" className={styles.userCard} onClick={close}>
+        <Link href="/perfil" className={styles.userCard} onClick={(event) => handleNavClick(event, '/perfil')}>
           <div className={styles.avatar}>{initials}</div>
           <div className={styles.userInfo}>
             <span className={styles.userName}>{displayName}</span>

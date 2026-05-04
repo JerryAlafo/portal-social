@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { ThemeProvider } from '@/lib/theme-context'
 import PasswordInput from '@/components/ui/PasswordInput'
 import Turnstile from '@/components/ui/Turnstile'
+import { clearGuestMode, enableGuestMode } from '@/lib/guest-mode'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -27,6 +28,17 @@ export default function LoginPage() {
 
   const handleChange = (field: keyof typeof values, value: string) => {
     setValues((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const getCallbackUrl = () => {
+    if (typeof window === 'undefined') return '/feed'
+    return new URLSearchParams(window.location.search).get('callbackUrl') || '/feed'
+  }
+
+  const handleGuestMode = () => {
+    setError('')
+    enableGuestMode()
+    router.push('/feed')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,7 +98,7 @@ export default function LoginPage() {
           email: values.email,
           password: values.password,
         })
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('SignIn error:', err)
       }
 
@@ -96,7 +108,8 @@ export default function LoginPage() {
         return
       }
 
-      router.push('/feed')
+      clearGuestMode()
+      router.push(getCallbackUrl())
       return
     }
 
@@ -132,7 +145,8 @@ export default function LoginPage() {
       return
     }
 
-    router.push('/feed')
+    clearGuestMode()
+    router.push(getCallbackUrl())
   }
 
   return (
@@ -247,8 +261,9 @@ export default function LoginPage() {
               disabled={mode === 'login' && !turnstileToken}
               onClick={() => {
                 setError('')
+                clearGuestMode()
                 signIn('google', { 
-                  callbackUrl: '/feed'
+                  callbackUrl: getCallbackUrl()
                 })
               }}
             >
@@ -296,6 +311,12 @@ export default function LoginPage() {
                 'Criar conta'
               )}
             </button>
+
+            {mode === 'login' && (
+              <button type="button" className="login-guest" onClick={handleGuestMode}>
+                Continuar como convidado
+              </button>
+            )}
           </form>
 
           {mode === 'login' && (

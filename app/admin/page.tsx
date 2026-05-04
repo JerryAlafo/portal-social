@@ -921,7 +921,7 @@ export default function AdminPage() {
                   )}
                   {r.post?.content && (
                     <div className={styles.reportPostContent}>
-                      "{r.post.content.length > 120 ? r.post.content.slice(0, 120) + '...' : r.post.content}"
+                      &quot;{r.post.content.length > 120 ? r.post.content.slice(0, 120) + '...' : r.post.content}&quot;
                     </div>
                   )}
                   {r.description && (

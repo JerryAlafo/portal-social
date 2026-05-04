@@ -1,0 +1,151 @@
+.guestBadge {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.34);
+}
+
+.guestIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--accent2);
+  background: var(--accent-glow);
+}
+
+.guestText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.guestTitle {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-display);
+}
+
+.guestDescription {
+  color: var(--text3);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.guestAction {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  background: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--transition), transform var(--transition);
+}
+
+.guestAction:hover {
+  background: var(--accent2);
+  transform: translateY(-1px);
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(4px);
+}
+
+.modal {
+  width: min(380px, 100%);
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.38);
+}
+
+.modalIcon {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  color: var(--accent2);
+  background: var(--accent-glow);
+}
+
+.modalTitle {
+  margin: 0 0 8px;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.modalText {
+  margin: 0 0 20px;
+  color: var(--text2);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.modalButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 42px;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  background: var(--accent);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.modalButton:hover {
+  background: var(--accent2);
+}
+
+@media (max-width: 640px) {
+  .guestBadge {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    gap: 10px;
+  }
+
+  .guestDescription {
+    display: none;
+  }
+}

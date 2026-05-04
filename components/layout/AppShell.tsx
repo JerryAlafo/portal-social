@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/lib/theme-context'
 import { SidebarProvider, useSidebar } from '@/lib/sidebar-context'
 import { ToastProvider } from '@/hooks/useToast'
 import Sidebar from './Sidebar'
+import GuestModeProvider from './GuestModeProvider'
 import styles from './AppShell.module.css'
 
 function ShellInner({ children }: { children: React.ReactNode }) {
@@ -24,7 +25,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <ThemeProvider>
         <ToastProvider>
           <SidebarProvider>
-            <ShellInner>{children}</ShellInner>
+            <GuestModeProvider>
+              <ShellInner>{children}</ShellInner>
+            </GuestModeProvider>
           </SidebarProvider>
         </ToastProvider>
       </ThemeProvider>
