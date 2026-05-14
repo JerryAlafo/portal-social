@@ -310,7 +310,7 @@ export default function FeedPage() {
                     })
                   }
                 }}
-                onInput={e => setComposeText((e.target as HTMLDivElement).textContent ?? '')}
+                onInput={e => setComposeText(e.currentTarget.innerText)}
                 data-placeholder={isGuest ? 'Entra para publicar no PORTAL' : `O que estas a pensar, ${firstName}?`}
               />
             </div>
